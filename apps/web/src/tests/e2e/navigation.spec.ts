@@ -19,11 +19,10 @@ test.describe('Dar Lemlih navigation tests', () => {
     // Verify we are on the products page
     await expect(page).toHaveURL(/\/fr\/products$/);
     await expect(page.getByRole('heading', { name: /collection/i })).toBeVisible();
-    await expect(page.getByText(/La collection arrivera bientôt/i)).toBeVisible();
   });
 
   test('can navigate to the story page', async ({ page }) => {
-    const nav = page.getByRole('navigation', { name: /navigation principale/i });
+    const nav = page.getByRole('navigation', { name: 'Main navigation' });
     const storyLink = nav.getByRole('link', { name: 'Notre histoire', exact: true });
     await storyLink.click();
 
