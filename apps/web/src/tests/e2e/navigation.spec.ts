@@ -12,11 +12,7 @@ test.describe('Dar Lemlih navigation tests', () => {
     const nav = page.locator('nav').first();
     await expect(nav).toBeVisible();
 
-    // Find the "Collection" link. We use a more flexible locator.
-    const collectionLink = page.getByRole('link', { name: /collection/i });
-
-    // If multiple links match, pick the one in the nav
-    const linkInNav = nav.locator(collectionLink);
+    const linkInNav = nav.getByRole('link', { name: 'Collection', exact: true });
     await expect(linkInNav).toBeVisible();
     await linkInNav.click();
 
@@ -27,8 +23,8 @@ test.describe('Dar Lemlih navigation tests', () => {
   });
 
   test('can navigate to the story page', async ({ page }) => {
-    // "Notre histoire" is likely the translation for "about" or "story"
-    const storyLink = page.getByRole('link', { name: /histoire/i });
+    const nav = page.getByRole('navigation', { name: /navigation principale/i });
+    const storyLink = nav.getByRole('link', { name: 'Notre histoire', exact: true });
     await storyLink.click();
 
     // Verify we are on the story page
