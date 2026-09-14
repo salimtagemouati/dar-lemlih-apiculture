@@ -43,11 +43,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/").permitAll()
-            .requestMatchers("/api/auth/**").permitAll()
+            // Public auth endpoints
+            .requestMatchers("/api/auth/login", "/api/auth/register",
+                             "/api/auth/refresh", "/api/auth/forgot-password",
+                             "/api/auth/reset-password").permitAll()
+            // /api/auth/me and /api/auth/logout require an authenticated user
+            .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
             .requestMatchers("/api/products/**").permitAll()
             .requestMatchers("/api/categories/**").permitAll()
+            .requestMatchers("/api/contact").permitAll()
             .requestMatchers("/api/payments/webhook").permitAll()
-            // Remove unsafe open utility in prod; restrict to ADMIN
             // Health and actuator endpoints
             .requestMatchers("/actuator/health").permitAll()
             .requestMatchers("/actuator/health/**").permitAll()

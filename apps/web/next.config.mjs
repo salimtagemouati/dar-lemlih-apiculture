@@ -11,7 +11,9 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'cdn.supabase.com' }
+      // Configure additional hosts here when product images are served from a CDN.
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'http', hostname: '127.0.0.1' }
     ],
     formats: ['image/avif', 'image/webp']
   },
@@ -20,8 +22,7 @@ const nextConfig = {
   },
   typescript: {
     ignoreBuildErrors: false
-  },
-  transpilePackages: ['@supabase/supabase-js']
+  }
 };
 
 const disableContentlayer = process.env.DISABLE_CONTENTLAYER === 'true';

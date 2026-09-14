@@ -1,6 +1,20 @@
+spring:
+  flyway:
+    # Production runs only the canonical migrations. Dev seed data is excluded.
+    locations: classpath:db/migration
+
 springdoc:
+  api-docs:
+    enabled: false
   swagger-ui:
     enabled: false
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
 
 management:
   endpoints:
@@ -11,3 +25,17 @@ management:
     health:
       show-details: never
 
+# Production logging: do NOT log SQL bind parameters (PII / secrets / hashes leak),
+# do NOT keep Spring Security at DEBUG (auth attempt logging).
+logging:
+  level:
+    root: INFO
+    com.darlemlih.apiculture: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# Force Stripe in prod (validated via PaymentConfig @PostConstruct)
+payment:
+  provider: stripe

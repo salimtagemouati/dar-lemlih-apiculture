@@ -1,33 +1,43 @@
 import type { Metadata, Viewport } from 'next';
-import { Playfair_Display, Manrope, Noto_Sans_Arabic } from 'next/font/google';
+import { Cormorant_Garamond, Inter, Noto_Sans_Arabic } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import { getLocale } from 'next-intl/server';
 import Providers from './providers';
 import './globals.css';
-import { isRTL, type Locale } from '@/i18n/routing';
+import { defaultLocale, isRTL } from '@/i18n/routing';
 
-const display = Playfair_Display({
+// Display: Cormorant Garamond — premium editorial serif used for hero headings,
+// product names, section H2s. Loaded with light + regular + semibold weights
+// and italic variants for tasting-note flourishes.
+const display = Cormorant_Garamond({
   subsets: ['latin'],
+  display: 'swap',
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
   variable: '--font-display'
 });
 
-const sans = Manrope({
+// Body: Inter — modern, neutral, excellent at small sizes.
+const sans = Inter({
   subsets: ['latin'],
+  display: 'swap',
+  weight: ['300', '400', '500', '600'],
   variable: '--font-sans'
 });
 
+// RTL fallback for Arabic locale.
 const arabic = Noto_Sans_Arabic({
   subsets: ['arabic'],
-  variable: '--font-arabic',
+  display: 'swap',
   weight: ['400', '500', '600', '700'],
+  variable: '--font-arabic'
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.dar-lemlih.com'),
   title: {
-    default: 'Atlas Nectar · Dar Lemlih',
-    template: '%s · Atlas Nectar'
+    default: 'Dar Lemlih — Le Miel de l\u2019Atlas',
+    template: '%s · Dar Lemlih'
   },
   description:
     `Dar Lemlih crée des miels marocains d'exception depuis l'Atlas. Découvrez nos crus rares, nos rituels, et notre savoir-faire apicole ancestral.`,
@@ -41,17 +51,17 @@ export const metadata: Metadata = {
     'miel de terroir'
   ],
   openGraph: {
-    title: 'Atlas Nectar · Dar Lemlih',
+    title: 'Dar Lemlih — Le Miel de l\u2019Atlas',
     description:
       'Une apiculture marocaine de prestige : crus rares, analyses, et histoires de rucher.',
     url: 'https://www.dar-lemlih.com',
-    siteName: 'Atlas Nectar',
+    siteName: 'Dar Lemlih',
     type: 'website',
     locale: 'fr_FR'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Atlas Nectar · Dar Lemlih',
+    title: 'Dar Lemlih — Le Miel de l\u2019Atlas',
     description: 'Miels marocains de prestige, sourcés avec rigueur et passion.',
     creator: '@darlemlih'
   },
@@ -69,16 +79,15 @@ export const viewport: Viewport = {
     { color: '#f9f6f1' }
   ],
   width: 'device-width',
-  initialScale: 1,
+  initialScale: 1
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = (await getLocale()) as Locale;
-  const direction = isRTL(locale) ? 'rtl' : 'ltr';
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const direction = isRTL(defaultLocale) ? 'rtl' : 'ltr';
 
   return (
     <html
-      lang={locale}
+      lang={defaultLocale}
       dir={direction}
       suppressHydrationWarning
       className={`${display.variable} ${sans.variable} ${arabic.variable}`}

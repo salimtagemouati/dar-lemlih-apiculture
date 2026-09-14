@@ -1,72 +1,123 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { toast } from 'sonner';
+import {
+  addToCartAction,
+  clearCartAction,
+  getCartAction,
+  removeFromCartAction,
+  updateCartItemAction
+} from '@/app/actions/cart';
+import type { CartDto, CartItemDto } from '@/lib/api/types';
 
-export interface Product {
-  id: string;
-  nameKey: string;
-  price: number;
-  image: string;
-  weight: string;
+interface CartState {
+  cart: CartDto | null;
+  loading: boolean;
+  hydrated: boolean;
+
+  hydrate: () => Promise<void>;
+  setCart: (cart: CartDto | null) => void;
+
+  addItem: (productId: number, quantity?: number, productName?: string) => Promise<void>;
+  updateQuantity: (productId: number, quantity: number) => Promise<void>;
+  removeItem: (productId: number) => Promise<void>;
+  clear: () => Promise<void>;
+
+  // Convenience selectors
+  totalItems: () => number;
+  totalPrice: () => number;
+  items: () => CartItemDto[];
 }
 
-export interface CartItem extends Product {
-  quantity: number;
-}
+const EMPTY_CART: CartDto = {
+  id: 0,
+  items: [],
+  subtotal: 0,
+  shippingCost: 0,
+  total: 0,
+  currency: 'MAD',
+  totalItems: 0
+};
 
-interface CartStore {
-  items: CartItem[];
-  addItem: (product: Product) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-  getTotalItems: () => number;
-  getTotalPrice: () => number;
-}
+export const useCart = create<CartState>((set, get) => ({
+  cart: null,
+  loading: false,
+  hydrated: false,
 
-export const useCart = create<CartStore>()(
-  persist(
-    (set, get) => ({
-      items: [],
-      addItem: (product) => {
-        const items = get().items;
-        const existingItem = items.find((item) => item.id === product.id);
+  setCart: cart => set({ cart, hydrated: true }),
 
-        if (existingItem) {
-          set({
-            items: items.map((item) =>
-              item.id === product.id
-                ? { ...item, quantity: item.quantity + 1 }
-                : item
-            ),
-          });
-        } else {
-          set({ items: [...items, { ...product, quantity: 1 }] });
-        }
-      },
-      removeItem: (id) => {
-        set({
-          items: get().items.filter((item) => item.id !== id),
-        });
-      },
-      updateQuantity: (id, quantity) => {
-        if (quantity <= 0) {
-          get().removeItem(id);
-          return;
-        }
-        set({
-          items: get().items.map((item) =>
-            item.id === id ? { ...item, quantity } : item
-          ),
-        });
-      },
-      clearCart: () => set({ items: [] }),
-      getTotalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
-      getTotalPrice: () => get().items.reduce((acc, item) => acc + item.price * item.quantity, 0),
-    }),
-    {
-      name: 'dar-lemlih-cart',
+  hydrate: async () => {
+    if (get().hydrated || get().loading) return;
+    set({ loading: true });
+    try {
+      const result = await getCartAction();
+      if (result.success) {
+        set({ cart: result.cart, loading: false, hydrated: true });
+      } else if (result.status === 401) {
+        // Anonymous user — empty cart, no error.
+        set({ cart: EMPTY_CART, loading: false, hydrated: true });
+      } else {
+        set({ loading: false, hydrated: true });
+      }
+    } catch {
+      set({ loading: false, hydrated: true });
     }
-  )
-);
+  },
+
+  addItem: async (productId, quantity = 1, productName) => {
+    set({ loading: true });
+    const result = await addToCartAction(productId, quantity);
+    if (result.success) {
+      set({ cart: result.cart, loading: false, hydrated: true });
+      if (productName) {
+        toast.success(`${productName} ajouté au panier`);
+      } else {
+        toast.success('Ajouté au panier');
+      }
+    } else {
+      set({ loading: false });
+      if (result.status === 401) {
+        toast.error('Connectez-vous pour ajouter au panier');
+      } else {
+        toast.error(result.error);
+      }
+    }
+  },
+
+  updateQuantity: async (productId, quantity) => {
+    if (quantity <= 0) {
+      await get().removeItem(productId);
+      return;
+    }
+    set({ loading: true });
+    const result = await updateCartItemAction(productId, quantity);
+    if (result.success) {
+      set({ cart: result.cart, loading: false });
+    } else {
+      set({ loading: false });
+      toast.error(result.error);
+    }
+  },
+
+  removeItem: async productId => {
+    set({ loading: true });
+    const result = await removeFromCartAction(productId);
+    if (result.success) {
+      set({ cart: result.cart, loading: false });
+    } else {
+      set({ loading: false });
+      toast.error(result.error);
+    }
+  },
+
+  clear: async () => {
+    set({ loading: true });
+    await clearCartAction();
+    set({ cart: EMPTY_CART, loading: false });
+  },
+
+  totalItems: () => get().cart?.totalItems ?? 0,
+  totalPrice: () => get().cart?.total ?? 0,
+  items: () => get().cart?.items ?? []
+}));

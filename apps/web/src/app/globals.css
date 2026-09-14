@@ -2,17 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ─────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Brand design tokens — premium Moroccan honey
+   The Tailwind config already exposes amber/sand/charcoal/atlas palettes that
+   map onto the spec's honey/earth/stone families. The CSS variables below are
+   the canonical source of truth and are referenced from utility classes /
+   components when raw `theme()` access isn't ergonomic.
+   ─────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
-  --radius-sm: 10px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
 
-  /* Moroccan terroir palette */
-  --honey-glow: 42 100% 55%;
-  --atlas-green: 162 30% 32%;
-  --terracotta: 18 60% 50%;
+  /* Brand palette — warm honey */
+  --honey-50:  #FFFBF0;
+  --honey-100: #FEF3C7;
+  --honey-200: #FDE68A;
+  --honey-300: #FCD34D;
+  --honey-400: #F59E0B;
+  --honey-500: #E9A30A;
+  --honey-600: #D97706;
+  --honey-700: #B45309;
+  --honey-800: #92400E;
+  --honey-900: #78350F;
+
+  /* Earth tones — warm browns of the souk */
+  --earth-50:  #FAF7F2;
+  --earth-100: #F0E9DC;
+  --earth-200: #DDD0BC;
+  --earth-300: #C4B299;
+  --earth-400: #B8A08A;
+  --earth-500: #95826B;
+  --earth-600: #8B6F55;
+  --earth-700: #6F573F;
+  --earth-800: #5C4533;
+  --earth-900: #3D2B1F;
+
+  /* Neutral — stones */
+  --stone-50:  #FAFAF9;
+  --stone-100: #F5F5F4;
+  --stone-200: #E7E5E4;
+  --stone-300: #D6D3D1;
+  --stone-400: #A8A29E;
+  --stone-500: #78716C;
+  --stone-600: #57534E;
+  --stone-700: #44403C;
+  --stone-800: #292524;
+  --stone-900: #1C1917;
+
+  /* Typography */
+  --font-display: 'Cormorant Garamond', 'Playfair Display', 'Georgia', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Spacing scale (per spec) */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2.5rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
 
   /* Glass panel defaults */
   --glass-bg: rgba(255, 255, 255, 0.72);
@@ -25,7 +77,9 @@
   --glass-border: rgba(255, 255, 255, 0.08);
 }
 
-/* ─── Global Reset Enhancements ─────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Global reset enhancements
+   ─────────────────────────────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -37,16 +91,13 @@ body {
   overflow-x: hidden;
 }
 
-/* ─── Premium Selection ─────────────────────────────── */
-::-moz-selection {
-  @apply bg-amber-200/80 text-charcoal-900;
-}
+/* Premium selection */
+::-moz-selection { @apply bg-amber-200/80 text-charcoal-900; }
+::selection { @apply bg-amber-200/80 text-charcoal-900; }
 
-::selection {
-  @apply bg-amber-200/80 text-charcoal-900;
-}
-
-/* ─── Layout Utilities ──────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Layout utilities
+   ─────────────────────────────────────────────────────────────────────────── */
 .container-bleed {
   @apply mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10;
 }
@@ -55,7 +106,9 @@ body {
   @apply py-20 sm:py-24 lg:py-32;
 }
 
-/* ─── Glassmorphism System ──────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Glassmorphism system
+   ─────────────────────────────────────────────────────────────────────────── */
 .backdrop-panel {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -64,7 +117,6 @@ body {
   @apply rounded-3xl shadow-lg;
 }
 
-/* ─── Shadow System ─────────────────────────────────── */
 .shadow-glass {
   box-shadow:
     0 16px 40px -16px rgba(17, 12, 8, 0.18),
@@ -77,94 +129,33 @@ body {
     0 4px 12px -4px rgba(17, 12, 8, 0.06);
 }
 
-/* ─── Scroll-Triggered Animations ───────────────────── */
-@keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-32px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(32px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
+/* ───────────────────────────────────────────────────────────────────────────
+   Scroll-triggered animations
+   ─────────────────────────────────────────────────────────────────────────── */
+@keyframes fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slide-in-left { from { opacity: 0; transform: translateX(-32px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(32px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 @keyframes honey-drip {
   0%, 100% { border-radius: 36% 64% 52% 48% / 54% 46% 54% 46%; }
   25% { border-radius: 48% 52% 62% 38% / 42% 58% 42% 58%; }
   50% { border-radius: 62% 38% 42% 58% / 56% 44% 56% 44%; }
   75% { border-radius: 52% 48% 38% 62% / 48% 52% 48% 52%; }
 }
-
-.animate-fade-up {
-  animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
+@keyframes scroll-indicator {
+  0% { transform: translateY(-100%); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-  opacity: 0;
-}
+.animate-fade-up    { animation: fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+.animate-fade-in    { animation: fade-in 0.6s ease-out forwards; opacity: 0; }
+.animate-scale-in   { animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+.animate-slide-left { animation: slide-in-left 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+.animate-slide-right{ animation: slide-in-right 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
 
-.animate-scale-in {
-  animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-
-.animate-slide-left {
-  animation: slide-in-left 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-
-.animate-slide-right {
-  animation: slide-in-right 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-
-/* Stagger children delay classes */
 .stagger-1 { animation-delay: 100ms; }
 .stagger-2 { animation-delay: 200ms; }
 .stagger-3 { animation-delay: 300ms; }
@@ -172,7 +163,9 @@ body {
 .stagger-5 { animation-delay: 500ms; }
 .stagger-6 { animation-delay: 600ms; }
 
-/* ─── Skeleton Loader ───────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Skeleton shimmer
+   ─────────────────────────────────────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -195,12 +188,14 @@ body {
   background-size: 200% 100%;
 }
 
-/* ─── Organic Shape ─────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────────────
+   Decorative bits
+   ─────────────────────────────────────────────────────────────────────────── */
 .honey-blob {
   animation: honey-drip 12s ease-in-out infinite;
 }
 
-/* ─── Premium Divider ───────────────────────────────── */
+/* Premium honey divider */
 .divider-honey {
   height: 2px;
   background: linear-gradient(
@@ -218,7 +213,27 @@ body {
   @apply opacity-20;
 }
 
-/* ─── Focus ring for accessibility ──────────────────── */
+/* Hero scroll indicator (animated thin honey line) */
+.hero-scroll-indicator {
+  position: relative;
+  width: 1px;
+  height: 56px;
+  overflow: hidden;
+}
+.hero-scroll-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 50%;
+  background: linear-gradient(to bottom, transparent, theme('colors.amber.400'));
+  animation: scroll-indicator 2.4s ease-in-out infinite;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Accessibility / interaction polish
+   ─────────────────────────────────────────────────────────────────────────── */
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-sand-25;
 }
@@ -227,12 +242,10 @@ body {
   @apply focus-visible:ring-offset-charcoal-950;
 }
 
-/* ─── Radix overlay z-index ─────────────────────────── */
 [data-radix-popper-content-wrapper] {
   z-index: 60;
 }
 
-/* ─── Touch targets ─────────────────────────────────── */
 @media (pointer: coarse) {
   button,
   a,
@@ -245,7 +258,7 @@ body {
   }
 }
 
-/* ─── RTL adjustments ───────────────────────────────── */
+/* RTL adjustments — fall back to Arabic font in RTL contexts */
 [dir="rtl"] .font-display {
   font-family: "Noto Sans Arabic", var(--font-display), serif;
 }

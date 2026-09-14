@@ -9,15 +9,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("h2")
+@ActiveProfiles("test")
 class AuthNegativeTest {
 
     @Autowired
@@ -28,8 +30,10 @@ class AuthNegativeTest {
     @Test
     @DisplayName("Refresh with invalid token returns 401 ApiError")
     void invalidRefreshToken() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of("refreshToken", "invalid-token"));
         mockMvc.perform(post("/api/auth/refresh")
-                        .queryParam("refreshToken", "invalid-token"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("INVALID_REFRESH_TOKEN"))
                 .andExpect(jsonPath("$.error").value("Unauthorized"));

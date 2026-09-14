@@ -1,31 +1,33 @@
 # Next phases for Dar Lemlih web
 
-The Next.js foundation, localisation, shadcn/ui primitives, and Supabase auth scaffolding are in place. The following tracks will help reach feature parity and unlock ecommerce flows.
+The Next.js foundation, localisation, design system, server-synced cart, and checkout / account flows are now in place against the Spring Boot API. The following tracks will help reach feature parity and unlock further capabilities.
 
-1. **Product data + catalog**
-   - Connect Supabase tables for products, categories, variants, nutrition info, lab certificates.
-   - Build `/[locale]/products` filters (floral source, region, weight, price) with server components + client refinements.
-   - Implement `/[locale]/products/[slug]` PDP with media gallery, variant switcher, nutrition accordions, reviews, structured data.
-2. **Cart & Checkout**
-   - Create zustand cart slice with storage sync, add server routes to persist carts for authenticated users.
-   - Integrate Stripe Checkout (test mode) with success/cancel pages and order confirmation.
-   - Add rate limiting for cart + checkout actions (Supabase Edge functions or middleware).
+1. **Catalog depth**
+   - Add filter facets (floral source, region, weight, price) with URL-state-driven Server Components and client-side refinements.
+   - Add a media gallery with thumbnail strip on the PDP (multiple images already supported by the API).
+   - Wire reviews + structured data (Product schema with `aggregateRating`).
+
+2. **Checkout polish**
+   - Add a "guest checkout" path that promotes the user to a real account post-purchase (email-on-success).
+   - Add coupon / discount codes on the checkout page (backend `Order.discount` is already in the schema).
+   - Pre-fill the shipping form from the user's last order's shipping address.
+
 3. **Account experiences**
-   - Implement `/[locale]/account`, `/[locale]/orders` with Supabase row level security, order history, address book.
-   - Expand middleware + server actions for profile updates and secure file downloads (lab certificates PDFs).
-4. **Content and CMS**
-   - Populate `src/content` with MDX (story, recipes, blog) and wire `contentlayer` generated types into routes.
-   - Add simple admin interface (protected route) to create/edit MDX entries or connect to a headless CMS if preferred.
-5. **Design polish**
-   - Extend shadcn tokens (forms, accordions, toast) to match brand art direction.
-   - Add testimonial carousel, FAQ accordion, CTA sections per design brief.
-   - Introduce tasteful framer-motion transitions for hero, cards, and section reveals.
-6. **Testing & QA**
-   - Expand Vitest coverage for UI components and stores.
-  - Add Playwright journeys for auth, add-to-cart, checkout, locale switching, hero load with blur transition.
-   - Track Lighthouse metrics; target ≥95 on mobile for all categories.
-7. **Deployment & observability**
-   - Configure Vercel preview/production env vars (Supabase + Stripe) and verify Supabase Auth redirect URIs.
-   - Add logging/monitoring for Supabase auth errors and Stripe webhook events.
+   - Address book (CRUD on `/api/addresses` — endpoint to be added).
+   - Profile editor (name / phone / password change).
+   - Downloadable invoices / lab certificates (PDF generation).
 
-These tasks should be prioritised after confirming Supabase credentials resolve the previous “Failed to fetch” login issue in each environment.
+4. **Content & CMS**
+   - Wire `apps/web/contentlayer.config.ts` to a real `src/content/blog` and `src/content/recipes` directory; render at `/[locale]/blog/[slug]` and `/[locale]/recipes/[slug]`.
+
+5. **Performance & polish**
+   - Replace remote Unsplash imagery with self-hosted assets (already supported by `next/image` `remotePatterns`).
+   - Audit Lighthouse on mobile (target ≥ 95 across categories).
+   - Add `nprogress`-style route transitions (currently `nextjs-toploader` is mounted but only on the header).
+
+6. **Observability**
+   - Add `Sentry` (or similar) error reporting on both surfaces.
+   - Add a server-side request log of cart / checkout failures keyed by user id (PII-safe).
+
+7. **Admin surface**
+   - Build `/[locale]/admin` (admin-only) for product CRUD, image uploads, order status transitions, refund processing — backend endpoints are already in place under `/api/admin/*`.

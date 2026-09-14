@@ -39,10 +39,13 @@ public class Category extends BaseEntity {
     private String image;
     
     @Column(nullable = false)
+    @lombok.Builder.Default
     private Boolean isActive = true;
     
+    @lombok.Builder.Default
     private Integer displayOrder = 0;
     
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @lombok.Builder.Default
     private List<Product> products = new ArrayList<>();
 }

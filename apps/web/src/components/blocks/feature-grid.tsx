@@ -29,7 +29,7 @@ const FEATURES = [
   },
 ];
 
-export function FeatureGrid({ locale }: { locale: string }) {
+export function FeatureGrid({ locale: _locale }: { locale: string }) {
   const t = useTranslations('usp');
 
   return (

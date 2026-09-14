@@ -12,7 +12,7 @@ const STATS = [
   { value: '12+', labelKey: 'terroirs' },
 ] as const;
 
-export function SocialProof({ locale }: { locale: string }) {
+export function SocialProof({ locale: _locale }: { locale: string }) {
   const t = useTranslations('socialProof');
 
   return (

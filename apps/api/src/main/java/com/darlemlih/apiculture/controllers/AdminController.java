@@ -3,9 +3,6 @@ package com.darlemlih.apiculture.controllers;
 import com.darlemlih.apiculture.dto.admin.*;
 import com.darlemlih.apiculture.dto.product.ProductDto;
 import com.darlemlih.apiculture.dto.product.ProductImageUploadResponse;
-import com.darlemlih.apiculture.entities.User;
-import com.darlemlih.apiculture.entities.enums.UserRole;
-import com.darlemlih.apiculture.repositories.UserRepository;
 import com.darlemlih.apiculture.services.AdminService;
 import com.darlemlih.apiculture.services.ProductService;
 import com.darlemlih.apiculture.config.properties.UploadProperties;
@@ -19,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,121 +23,49 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final AdminService adminService;
     private final ProductService productService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final FileStorageService fileStorageService;
     private final UploadProperties uploadProperties;
 
-    private String getSeedPassword() {
-        String envPassword = System.getenv("SEED_DEFAULT_PASSWORD");
-        return envPassword != null ? envPassword : "ChangeMe!2025";
-    }
-
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<DashboardDto> getDashboard() {
         return ResponseEntity.ok(adminService.getDashboardStats());
     }
 
-    @PostMapping("/seed")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<String> seedDatabase() {
-        adminService.seedDatabase();
-        return ResponseEntity.ok("Database seeded successfully");
-    }
-    
-    @PostMapping("/reset-passwords")
-    public ResponseEntity<Map<String, Object>> resetPasswords() {
-        Map<String, Object> result = new HashMap<>();
-        
-        // Reset admin password
-        userRepository.findByEmail("admin@darlemlih.ma").ifPresent(user -> {
-            user.setPassword(passwordEncoder.encode(getSeedPassword()));
-            userRepository.save(user);
-            result.put("admin", "Password reset successfully");
-        });
-        
-        // Reset customer password
-        userRepository.findByEmail("customer@darlemlih.ma").ifPresent(user -> {
-            user.setPassword(passwordEncoder.encode(getSeedPassword()));
-            userRepository.save(user);
-            result.put("customer", "Password reset successfully");
-        });
-        
-        // Create users if they don't exist
-        if (!userRepository.existsByEmail("admin@darlemlih.ma")) {
-            User admin = User.builder()
-                    .name("Admin User")
-                    .email("admin@darlemlih.ma")
-                    .password(passwordEncoder.encode(getSeedPassword()))
-                    .phone("+212600000001")
-                    .role(UserRole.ADMIN)
-                    .enabled(true)
-                    .emailVerified(true)
-                    .build();
-            userRepository.save(admin);
-            result.put("admin", "Admin user created");
-        }
-        
-        if (!userRepository.existsByEmail("customer@darlemlih.ma")) {
-            User customer = User.builder()
-                    .name("Customer User")
-                    .email("customer@darlemlih.ma")
-                    .password(passwordEncoder.encode(getSeedPassword()))
-                    .phone("+212600000002")
-                    .role(UserRole.CUSTOMER)
-                    .enabled(true)
-                    .emailVerified(true)
-                    .build();
-            userRepository.save(customer);
-            result.put("customer", "Customer user created");
-        }
-        
-        result.put("message", "Passwords reset successfully");
-        return ResponseEntity.ok(result);
-    }
-
     // Basic product management for MVP
     @GetMapping("/products")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<ProductDto>> listProducts(Pageable pageable) {
         return ResponseEntity.ok(productService.listAll(pageable));
     }
 
     @PostMapping("/products")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto dto) {
         return ResponseEntity.ok(productService.create(dto));
     }
 
     @PutMapping("/products/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         return ResponseEntity.ok(productService.update(id, dto));
     }
 
     @DeleteMapping("/products/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/products/{id}/images")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductImageUploadResponse> uploadImages(
             @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files) {

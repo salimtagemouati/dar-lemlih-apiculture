@@ -20,6 +20,12 @@ const buttonVariants = cva(
         link: 'text-amber-600 underline-offset-4 hover:underline dark:text-amber-300',
         premium:
           'bg-gradient-to-r from-amber-500 via-honey-glow to-amber-500 bg-[length:200%_100%] text-white shadow-glow hover:bg-[position:100%_0] hover:shadow-glow-lg transition-[background-position,box-shadow] duration-700',
+        // Hero — flat honey on dark imagery, no gradient, low rounded corners.
+        hero:
+          'bg-amber-400 text-stone-900 shadow-md hover:bg-amber-500 hover:shadow-lg active:bg-amber-600',
+        // Ghost-on-hero — white outline on imagery.
+        ghostHero:
+          'border border-white/80 bg-transparent text-white hover:border-white hover:bg-white/10'
       },
       size: {
         sm: 'h-9 px-4 py-2 text-xs',

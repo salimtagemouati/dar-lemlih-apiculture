@@ -14,7 +14,7 @@
     <artifactId>atlas-nectar-api</artifactId>
     <version>1.0.0</version>
     <name>atlas-nectar-api</name>
-    <description>E-commerce API for Atlas Nectar</description>
+    <description>E-commerce REST API for Dar Lemlih Apiculture (legacy artifact id: atlas-nectar-api)</description>
     
     <properties>
         <java.version>21</java.version>

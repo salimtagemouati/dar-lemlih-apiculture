@@ -28,11 +28,12 @@ spring:
 server:
   port: 8080
 
-
 app:
   base-url: http://localhost:8080
+  web-base-url: http://localhost:3000
 
+# Millisecond JWT settings (15 min / 7 days)
 jwt:
   secret: change_me_dev_secret_change_in_prod_please_12345678901234567890
-  access-token-expiration: 15
-  refresh-token-expiration: 7
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000

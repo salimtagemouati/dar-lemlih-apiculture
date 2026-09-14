@@ -15,7 +15,7 @@ public class OpenApiConfig {
     public OpenAPI api() {
         final String schemeName = "bearer-jwt";
         return new OpenAPI()
-                .info(new Info().title("Atlas Nectar API").version("v1"))
+                .info(new Info().title("Dar Lemlih API").version("v1"))
                 .addSecurityItem(new SecurityRequirement().addList(schemeName))
                 .components(new Components().addSecuritySchemes(schemeName,
                         new SecurityScheme()

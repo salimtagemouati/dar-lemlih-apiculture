@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { loginAction, registerAction } from '@/app/actions/auth';
+import { forgotPasswordAction, loginAction, registerAction } from '@/app/actions/auth';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,7 @@ function AuthTabs({ onAuthenticated }: AuthTabsProps) {
 
   const [tab, setTab] = useState<'login' | 'register' | 'reset'>('login');
   const [isPending, startTransition] = useTransition();
+  const [resetSent, setResetSent] = useState(false);
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -74,8 +75,8 @@ function AuthTabs({ onAuthenticated }: AuthTabsProps) {
 
   const handleAuthSuccess = () => {
     onAuthenticated?.();
-    router.replace(redirectTo as any);
-    router.refresh(); // Refresh to update auth state in header
+    router.replace(redirectTo as `/${string}`);
+    router.refresh();
   };
 
   const handleLogin = loginForm.handleSubmit(values => {
@@ -93,7 +94,11 @@ function AuthTabs({ onAuthenticated }: AuthTabsProps) {
 
   const handleRegister = registerForm.handleSubmit(values => {
     startTransition(async () => {
-      const result = await registerAction(values);
+      const result = await registerAction({
+        name: values.name,
+        email: values.email,
+        password: values.password
+      });
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -106,15 +111,23 @@ function AuthTabs({ onAuthenticated }: AuthTabsProps) {
 
   const handleReset = resetForm.handleSubmit(values => {
     startTransition(async () => {
-      // TODO: Implement forgot password on backend if needed
-      toast.success('Check your inbox to continue.');
+      const result = await forgotPasswordAction(values.email);
+      // Backend always returns 200 with a generic message — display it as-is.
+      toast.success(result.message);
       resetForm.reset();
-      setTab('login');
+      setResetSent(true);
     });
   });
 
   return (
-    <Tabs value={tab} onValueChange={value => setTab(value as typeof tab)} className="space-y-6">
+    <Tabs
+      value={tab}
+      onValueChange={value => {
+        setTab(value as typeof tab);
+        setResetSent(false);
+      }}
+      className="space-y-6"
+    >
       <TabsList className="w-full">
         <TabsTrigger value="login">{t('tabs.login')}</TabsTrigger>
         <TabsTrigger value="register">{t('tabs.register')}</TabsTrigger>
@@ -127,63 +140,87 @@ function AuthTabs({ onAuthenticated }: AuthTabsProps) {
             type="email"
             placeholder={t('email')}
             {...loginForm.register('email')}
-            aria-invalid={!!loginForm.formState.errors.email}
+            error={!!loginForm.formState.errors.email}
           />
           <Input
             type="password"
             placeholder={t('password')}
             {...loginForm.register('password')}
-            aria-invalid={!!loginForm.formState.errors.password}
+            error={!!loginForm.formState.errors.password}
           />
           <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? '...' : t('submit')}
+            {isPending ? '…' : t('submit')}
           </Button>
+          <button
+            type="button"
+            onClick={() => setTab('reset')}
+            className="block w-full text-center text-xs text-charcoal-500 hover:text-amber-600"
+          >
+            {t('forgot')}
+          </button>
         </form>
       </TabsContent>
 
       <TabsContent value="register" className="border-0 bg-transparent p-0 shadow-none">
         <form className="space-y-4" onSubmit={handleRegister}>
           <Input
-            placeholder="Full Name"
+            placeholder="Nom complet"
             {...registerForm.register('name')}
-            aria-invalid={!!registerForm.formState.errors.name}
+            error={!!registerForm.formState.errors.name}
           />
           <Input
             type="email"
             placeholder={t('email')}
             {...registerForm.register('email')}
-            aria-invalid={!!registerForm.formState.errors.email}
+            error={!!registerForm.formState.errors.email}
           />
           <Input
             type="password"
             placeholder={t('password')}
             {...registerForm.register('password')}
-            aria-invalid={!!registerForm.formState.errors.password}
+            error={!!registerForm.formState.errors.password}
           />
           <Input
             type="password"
             placeholder={t('confirmPassword')}
             {...registerForm.register('confirmPassword')}
-            aria-invalid={!!registerForm.formState.errors.confirmPassword}
+            error={!!registerForm.formState.errors.confirmPassword}
           />
           <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? '...' : t('tabs.register')}
+            {isPending ? '…' : t('tabs.register')}
           </Button>
         </form>
       </TabsContent>
 
       <TabsContent value="reset" className="border-0 bg-transparent p-0 shadow-none">
-        <form className="space-y-4" onSubmit={handleReset}>
-          <Input
-            type="email"
-            placeholder={t('email')}
-            {...resetForm.register('email')}
-            aria-invalid={!!resetForm.formState.errors.email}
-          />
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? '...' : t('tabs.reset')}
-          </Button>
-        </form>
+        {resetSent ? (
+          <div className="space-y-3 rounded-2xl border border-amber-200/40 bg-amber-50/60 p-6 text-center text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-200">
+            <p className="font-medium">Vérifiez votre boîte de réception.</p>
+            <p>
+              Si un compte existe avec cet email, un lien de réinitialisation a
+              été envoyé.
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => setTab('login')}>
+              ← Retour à la connexion
+            </Button>
+          </div>
+        ) : (
+          <form className="space-y-4" onSubmit={handleReset}>
+            <p className="text-xs text-charcoal-500 dark:text-charcoal-400">
+              Saisissez votre email — nous vous enverrons un lien pour
+              réinitialiser votre mot de passe.
+            </p>
+            <Input
+              type="email"
+              placeholder={t('email')}
+              {...resetForm.register('email')}
+              error={!!resetForm.formState.errors.email}
+            />
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? '…' : t('tabs.reset')}
+            </Button>
+          </form>
+        )}
       </TabsContent>
     </Tabs>
   );

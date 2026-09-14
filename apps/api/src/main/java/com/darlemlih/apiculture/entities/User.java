@@ -32,12 +32,15 @@ public class User extends BaseEntity implements UserDetails {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @lombok.Builder.Default
     private UserRole role = UserRole.CUSTOMER;
     
     @Column(nullable = false)
+    @lombok.Builder.Default
     private Boolean enabled = true;
     
     @Column(nullable = false)
+    @lombok.Builder.Default
     private Boolean emailVerified = false;
     
     private String resetPasswordToken;

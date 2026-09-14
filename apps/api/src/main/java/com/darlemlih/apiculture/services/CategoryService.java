@@ -2,6 +2,7 @@ package com.darlemlih.apiculture.services;
 
 import com.darlemlih.apiculture.dto.category.CategoryDto;
 import com.darlemlih.apiculture.entities.Category;
+import com.darlemlih.apiculture.exceptions.NotFoundException;
 import com.darlemlih.apiculture.repositories.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class CategoryService {
 
     public CategoryDto getCategoryBySlug(String slug) {
         Category category = categoryRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("CATEGORY_NOT_FOUND", "Category not found"));
         return toDto(category);
     }
 
@@ -42,7 +43,8 @@ public class CategoryService {
                 .descriptionAr(category.getDescriptionAr())
                 .image(category.getImage())
                 .displayOrder(category.getDisplayOrder())
-                .productCount((long) category.getProducts().size())
+                // COUNT(*) query — no full collection load.
+                .productCount(categoryRepository.countActiveByCategoryId(category.getId()))
                 .build();
     }
 }

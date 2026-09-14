@@ -50,7 +50,7 @@ Use repository root as the default cwd, then run per app:
 ## Key repository conventions
 
 - Frontend locale routing is mandatory prefix (`/ar`, `/fr`, `/en`), defined in `src/i18n/routing.ts` and enforced in `src/middleware.ts`.
-- Protected frontend sections are route-segment based (`account`, `orders`, `checkout`) and gate on the `sb-darlemlih-auth` cookie.
+- Protected frontend sections are route-segment based (`account`, `orders`, `checkout`) and gate on the `dar-lemlih-token` cookie (HttpOnly access token issued by the Spring Security JWT flow). The matching refresh token lives in `dar-lemlih-refresh`.
 - Frontend message catalogs are file-based in `src/i18n/messages/{locale}.json`; `src/i18n/request.ts` dynamically imports the matching file.
 - `apps/web` runs Contentlayer before build via `prebuild`, so content/schema changes should be reflected in `src/content` + `contentlayer.config.ts`.
 - Playwright tests live in `apps/web/src/tests/e2e`; default base URL is `http://localhost:5173` unless `PLAYWRIGHT_BASE_URL` is set.

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@/i18n/routing';
 import { Section } from '@/components/blocks/section';
 import { Card } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 const BLOG_POSTS = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?auto=format&fit=crop&w=800&q=80',
     category: 'Recipe',
     title: 'Atlas Thyme Honey Glazed Tagine',
     excerpt: 'A refined take on the classic lamb tagine, elevated with our wild thyme honey from 2,400m altitude.',
@@ -17,7 +17,7 @@ const BLOG_POSTS = [
   },
   {
     id: 2,
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=800&q=80',
     category: 'Terroir',
     title: 'Understanding Moroccan Honey Terroir',
     excerpt: 'Like wine, honey expresses its geography. Explore how altitude, flora, and season shape each batch.',
@@ -25,7 +25,7 @@ const BLOG_POSTS = [
   },
   {
     id: 3,
-    image: 'https://images.unsplash.com/photo-1471943311424-646960669fbc?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1471943038711-ddd2a7d4c9aa?auto=format&fit=crop&w=800&q=80',
     category: 'Wellness',
     title: 'Morning Honey Ritual for Energy',
     excerpt: 'Discover the Berber tradition of raw honey and warm water — a simple ritual with profound benefits.',
@@ -42,6 +42,8 @@ export async function generateMetadata({ params }: { params: { locale: Locale } 
 }
 
 export default async function BlogPage({ params }: { params: { locale: Locale } }) {
+  setRequestLocale(params.locale);
+
   const t = await getTranslations({ locale: params.locale, namespace: 'blog' });
 
   return (

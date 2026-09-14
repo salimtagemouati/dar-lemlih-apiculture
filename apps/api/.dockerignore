@@ -1,0 +1,9 @@
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.env
+.env.*
+logs/
+uploads/
+*.iml

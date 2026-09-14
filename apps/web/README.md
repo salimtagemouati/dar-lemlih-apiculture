@@ -1,84 +1,98 @@
-# Atlas Nectar Web — Next.js 14 App Router
+# Dar Lemlih Web — Next.js 14 App Router
 
-Premium Moroccan apiculture storefront built with **Next.js 14**, **Tailwind CSS**, **Supabase Auth**, and **next-intl**. Supports French, English, and Arabic with full RTL/LTR awareness and a custom Moroccan terroir design system.
+Premium Moroccan apiculture storefront built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, and **next-intl**. Supports French, English, and Arabic with full RTL/LTR awareness and a Cormorant Garamond × Inter editorial design system. Authentication is provided by the Spring Boot API using stateless JWT (HttpOnly cookies), not by any third-party identity provider.
 
-## Quick Start
+## Quick start
 
 ```bash
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000). Redirects to `/fr` by default; switch language via the globe icon.
+The default API base is `http://localhost:8080`. To point at a different backend, set `NEXT_PUBLIC_API_URL`.
 
-## Environment Variables
+## Environment
 
-Copy the example and fill in your own values:
+The web app only reads `NEXT_PUBLIC_*` variables; everything sensitive (JWT secrets, Stripe keys) lives on the API side.
 
-```bash
-cp .env.example .env
-```
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Spring Boot API base URL. Defaults to `http://localhost:8080`. |
+| `PLAYWRIGHT_BASE_URL` | Optional override for E2E. Defaults to `http://localhost:3000`. |
+| `DISABLE_CONTENTLAYER` | Optional `true` — skip MDX content during builds. |
 
-Required variables (see `.env.example` for the full list):
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-> ⚠️ Never commit `.env` files. They are gitignored.
-
-## Project Structure
-
-```
-src/
-  app/
-    (marketing)/[locale]/         # Locale-aware marketing routes
-      page.tsx                    # Homepage
-      products/page.tsx           # Product catalog
-      story/page.tsx              # Brand narrative
-      blog/page.tsx               # Journal & recipes
-      contact/page.tsx            # Contact form
-    layout.tsx                    # Root layout with fonts, SEO, providers
-    globals.css                   # Design tokens, animations, utilities
-  components/
-    blocks/                       # Hero, FeatureGrid, Steps, ProductCatalog, SocialProof
-    forms/                        # AuthDialog, ContactForm
-    layout/                       # SiteHeader, SiteFooter, LocaleSwitcher, CookieBanner
-    ui/                           # Button, Card, Badge, Input, AnimateOnScroll, Skeleton
-  i18n/
-    messages/                     # FR, EN, AR translation dictionaries
-    routing.ts                    # Locale config, RTL detection
-  lib/
-    hooks/use-in-view.ts          # IntersectionObserver scroll hook
-    supabase/                     # Server/client Supabase helpers
-    utils.ts                      # cn() utility
-```
-
-## Design System
-
-Custom Moroccan terroir palette defined in `tailwind.config.ts`:
-
-- **honey** — Primary gold accents
-- **atlas** — Green for sustainability/nature
-- **terracotta** — Warm accent highlights
-- **sand** — Light backgrounds & surfaces
-- **charcoal** — Text & dark mode
-
-Key features: glassmorphism panels, fluid `clamp()` typography, `ease-out-expo` transitions, scroll-triggered CSS animations, skeleton shimmer loaders, RTL logical properties.
+See the [root README](../../README.md#-environment-variables) for the full env-vars table including the backend.
 
 ## Scripts
 
-```bash
-npm run dev            # Start dev server
-npm run build          # Production build
-npm run typecheck      # TypeScript type checking
-npm run lint           # ESLint
-npm run test           # Vitest unit tests
-npm run playwright:test # E2E smoke tests
+| Command | Description |
+|---|---|
+| `npm run dev` | Next.js dev server on port 3000. |
+| `npm run build` | Contentlayer prebuild + `next build`. |
+| `npm run start` | Run the production build. |
+| `npm run typecheck` | `tsc --noEmit`. |
+| `npm run lint` | ESLint (Next.js + TypeScript-checked rules). |
+| `npm test` | Vitest. |
+| `npm run playwright:test` | Playwright E2E (requires API + web running). |
+
+## Architecture
+
+```
+src/
+├── app/
+│   ├── (marketing)/[locale]/      # localized public surface
+│   │     page.tsx                 #   /[locale]                home
+│   │     products/                #   /[locale]/products
+│   │     story/, blog/, contact/  #   editorial pages
+│   │     checkout/                #   /[locale]/checkout (+ success / cancel)
+│   │     account/                 #   /[locale]/account (+ /orders, /orders/[orderNumber])
+│   ├── (auth)/[locale]/           #   /[locale]/login + /[locale]/reset-password
+│   ├── actions/                   # Server Actions: auth.ts, cart.ts, checkout.ts, contact.ts, password.ts
+│   ├── globals.css                # tokens + animations + glass system
+│   ├── layout.tsx                 # root metadata, font loading, Providers
+│   └── providers.tsx              # ThemeProvider + Tooltip + Sonner + CartHydrator
+├── components/
+│   ├── blocks/                    # Hero, FeatureGrid, ProductCatalog, ContactForm, Steps, …
+│   ├── layout/                    # SiteHeader, SiteFooter, CartSheet, LocaleSwitcher, ThemeToggle, UserAccountNav, CookieBanner
+│   ├── account/                   # OrderStatusBadge
+│   ├── checkout/                  # Stepper
+│   └── ui/                        # Radix UI primitives (Button, Sheet, Dialog, Accordion, Tabs, …)
+├── lib/
+│   ├── api/                       # Typed API client (server + browser, refresh-on-401)
+│   │   ├── client.ts              # apiFetch / apiFetchClient + ApiClientError
+│   │   ├── types.ts               # ProductDto, CategoryDto, CartDto, OrderDto, …
+│   │   ├── auth.ts                # login / register / refresh / logout / forgotPassword / resetPassword
+│   │   ├── products.ts            # getProducts / getProductBySlug / getCategories / getFeaturedProducts
+│   │   ├── cart.ts                # getCart / addToCart / updateCartItem / removeFromCart / clearCart
+│   │   ├── orders.ts              # getMyOrders / getOrder / checkout
+│   │   └── contact.ts             # sendContactMessage
+│   ├── format.ts                  # formatPriceMAD, formatDate, localizedProductName, resolveImageUrl
+│   ├── hooks/use-cart.ts          # Zustand store synced to /api/cart via Server Actions
+│   ├── hooks/use-in-view.ts       # IntersectionObserver scroll hook
+│   └── utils.ts                   # cn()
+├── i18n/
+│   ├── routing.ts                 # locale list + RTL helpers
+│   ├── request.ts                 # next-intl config
+│   └── messages/{fr,en,ar}.json
+└── middleware.ts                  # locale router + protected-segment auth gate
 ```
 
-## Deployment
+## Authentication & sessions
 
-Connect to **Vercel**, configure env vars in the dashboard, and deploy. The build runs `npm install` → `npm run build` automatically.
+Authentication is handled by the Spring API. The frontend stores tokens in two HttpOnly cookies set by Server Actions (`src/app/actions/auth.ts`):
+
+- `dar-lemlih-token` — short-lived (15 min) access JWT.
+- `dar-lemlih-refresh` — long-lived (7 days) refresh JWT.
+
+`getSessionAction` reads the access cookie and, on 401, transparently calls `refreshAction` (which posts the refresh token to `/api/auth/refresh`) before retrying. `logoutAction` calls `DELETE /api/auth/logout` to revoke the stored hash and clears both cookies.
+
+## Cart & checkout
+
+The cart store (`src/lib/hooks/use-cart.ts`) is a thin Zustand layer over Server Actions in `src/app/actions/cart.ts`. The `CartHydrator` client component mounts inside `Providers` and hydrates the store from `GET /api/cart` on first render.
+
+Checkout posts to `/api/orders/checkout` via `checkoutAction` and redirects to the Stripe Checkout `paymentUrl` returned by the backend. Stripe redirects back to `/[locale]/checkout/success?order=…` or `/[locale]/checkout/cancel`.
+
+## Internationalisation
+
+Powered by `next-intl`. Locale prefix is mandatory in URLs. RTL is achieved with Tailwind logical properties (`ps`, `pe`, `ms`, `me`, `start`, `end`). Arabic falls back to the Noto Sans Arabic font.

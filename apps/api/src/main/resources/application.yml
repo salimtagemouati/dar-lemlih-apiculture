@@ -3,7 +3,7 @@ spring:
     import: optional:file:.env[.properties]
 
   application:
-    name: atlas-nectar-api
+    name: dar-lemlih-api
   
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
@@ -62,15 +62,17 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
   error:
     include-message: always
     include-binding-errors: always
 
-# JWT Configuration
+# JWT Configuration — values are MILLISECONDS.
+# Defaults: 15 min access, 7 days refresh.
 jwt:
   secret: ${JWT_SECRET:}
-  access-token-expiration: ${JWT_ACCESS_TTL_MIN:15}
-  refresh-token-expiration: ${JWT_REFRESH_TTL_DAYS:7}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
 
 # Payment Configuration
 payment:
@@ -78,22 +80,20 @@ payment:
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    success-url: ${PAYMENT_SUCCESS_URL:${app.web-base-url}/payment/success}
-    cancel-url: ${PAYMENT_CANCEL_URL:${app.web-base-url}/payment/cancel}
-  mock:
-    enabled: true
+    success-url: ${PAYMENT_SUCCESS_URL:${app.web-base-url}/checkout/success}
+    cancel-url: ${PAYMENT_CANCEL_URL:${app.web-base-url}/checkout/cancel}
 
 # Application Configuration
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
-  web-base-url: ${WEB_BASE_URL:http://localhost:5173}
+  web-base-url: ${WEB_BASE_URL:http://localhost:3000}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://localhost}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost}
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS
     allowed-headers: "*"
     allow-credentials: true
     max-age: 3600
-  
+
   uploads:
     path: ${UPLOAD_PATH:./uploads}
     public-base-url: ${UPLOAD_PUBLIC_BASE_URL:/uploads}
@@ -115,7 +115,7 @@ aws:
   access-key: ${AWS_ACCESS_KEY_ID:}
   secret-key: ${AWS_SECRET_ACCESS_KEY:}
   s3:
-    enabled: ${STORAGE_S3_ENABLED:true}
+    enabled: ${STORAGE_S3_ENABLED:false}
     bucket: ${S3_BUCKET:media}
 
 # OpenAPI Documentation
@@ -131,15 +131,17 @@ springdoc:
     operations-sorter: alpha
   show-actuator: false
 
-# Logging
+# Logging — DEFAULTS are tuned for non-prod. application-prod.yml overrides
+# org.hibernate.type.descriptor.sql.BasicBinder, org.springframework.security
+# and org.hibernate.SQL to WARN to avoid leaking PII / secrets.
 logging:
   level:
     root: INFO
     com.darlemlih.apiculture: DEBUG
     org.springframework.web: INFO
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

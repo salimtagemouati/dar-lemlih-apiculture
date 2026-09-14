@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: dar-lemlih-api
+    runtime: docker
+    plan: free
+    rootDir: apps/api
+    healthCheckPath: /actuator/health
+    disk:
+      name: dar-lemlih-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: portfolio
+      - key: PORTFOLIO_DB_PATH
+        value: /var/data/darlemlih
+      - key: UPLOAD_PATH
+        value: /app/uploads
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_BASE_URL
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SEED_DEFAULT_PASSWORD
+        sync: false

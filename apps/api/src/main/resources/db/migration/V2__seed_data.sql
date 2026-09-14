@@ -1,3 +1,9 @@
+-- Seed catalog data only (categories, products, product_images).
+-- USER ACCOUNTS are intentionally NOT seeded here.
+-- - In dev: DataInitializer (profile=dev) creates admin/customer at runtime
+--   using PasswordEncoder.encode() with a runtime-generated password.
+-- - In prod: no seed users are inserted; admins are bootstrapped out-of-band.
+
 -- Insert categories
 INSERT INTO categories (slug, name_fr, name_en, name_ar, description_fr, description_en, description_ar, is_active, display_order) VALUES
 ('miels', 'Miels', 'Honeys', 'عسل', 'Découvrez notre sélection de miels naturels du terroir marocain', 'Discover our selection of natural honeys from Moroccan terroir', 'اكتشف مجموعتنا من العسل الطبيعي من التراث المغربي', true, 1),
@@ -6,7 +12,7 @@ INSERT INTO categories (slug, name_fr, name_en, name_ar, description_fr, descrip
 
 -- Insert products
 INSERT INTO products (sku, slug, name_fr, name_en, name_ar, description_fr, description_en, description_ar, price, currency, stock_quantity, weight_grams, ingredients, origin, is_halal, is_active, is_featured, category_id) VALUES
-('HNY-ORA-500', 'miel-oranger-500g', 'Miel d''Oranger 500g', 'Orange Blossom Honey 500g', 'عسل زهر البرتقال 500غ', 
+('HNY-ORA-500', 'miel-oranger-500g', 'Miel d''Oranger 500g', 'Orange Blossom Honey 500g', 'عسل زهر البرتقال 500غ',
 'Notre miel d''oranger est récolté dans les vergers d''agrumes du Souss. Sa texture crémeuse et son goût doux et floral en font un délice pour les papilles. Parfait pour sucrer naturellement vos boissons chaudes ou à déguster sur du pain.',
 'Our orange blossom honey is harvested from the citrus groves of Souss. Its creamy texture and sweet, floral taste make it a delight for the taste buds. Perfect for naturally sweetening your hot drinks or enjoying on bread.',
 'يتم حصاد عسل زهر البرتقال لدينا من بساتين الحمضيات في سوس. قوامه الكريمي وطعمه الحلو الزهري يجعله متعة للذوق. مثالي لتحلية مشروباتك الساخنة بشكل طبيعي أو للاستمتاع به على الخبز.',
@@ -45,24 +51,3 @@ INSERT INTO product_images (product_id, image_url) VALUES
 (3, '/images/products/miel-eucalyptus-1.jpg'),
 (4, '/images/products/pollen-abeille-1.jpg'),
 (5, '/images/products/miel-multifloral-1.jpg');
-
--- Insert seed users (BCrypt hashed passwords — set via SEED_DEFAULT_PASSWORD env var)
--- Note: These hashes are for development seeding only. Change credentials before production.
-INSERT INTO users (name, email, password, phone, role, enabled, email_verified) VALUES
-('Admin User', 'admin@darlemlih.ma', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQyCqXMfJVgPEtuDSqGaQ4mBm', '+212600000001', 'ADMIN', true, true),
-('Customer User', 'customer@darlemlih.ma', '$2a$12$SME34mBRdqO3V6z8Xz7gDuvx1j8xJ9Z7qGPwLXXYJxXCj7qrJ3RpO', '+212600000002', 'CUSTOMER', true, true),
-('Test Customer', 'test@example.com', '$2a$12$SME34mBRdqO3V6z8Xz7gDuvx1j8xJ9Z7qGPwLXXYJxXCj7qrJ3RpO', '+212600000003', 'CUSTOMER', true, false);
-
--- Insert addresses for customer user
-INSERT INTO addresses (user_id, line1, line2, city, region, postal_code, country, is_default) VALUES
-(2, '123 Rue Mohammed V', 'Appartement 4', 'Casablanca', 'Casablanca-Settat', '20000', 'Morocco', true),
-(2, '456 Avenue Hassan II', NULL, 'Rabat', 'Rabat-Salé-Kénitra', '10000', 'Morocco', false);
-
--- Insert a sample paid order
-INSERT INTO orders (order_number, user_id, status, subtotal, shipping_cost, discount, total, currency, payment_provider, payment_intent_id, shipping_name, shipping_phone, shipping_line1, shipping_city, shipping_region, shipping_postal_code, shipping_country) VALUES
-('ORD-2025-000001', 2, 'PAID', 274.00, 30.00, 0.00, 304.00, 'MAD', 'mock', 'pi_mock_123456789', 'Customer User', '+212600000002', '123 Rue Mohammed V', 'Casablanca', 'Casablanca-Settat', '20000', 'Morocco');
-
--- Insert order items for the sample order
-INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price) VALUES
-(1, 1, 2, 89.00, 178.00),
-(1, 2, 1, 95.00, 95.00);

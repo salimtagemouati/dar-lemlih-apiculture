@@ -3,22 +3,26 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ShoppingBag, Plus, Minus } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useCart, Product } from '@/lib/hooks/use-cart';
+import { useCart } from '@/lib/hooks/use-cart';
 
-export function AddToCartButton({ product }: { product: Product }) {
+interface AddToCartButtonProps {
+  productId: number;
+  productName: string;
+  stockQuantity: number;
+}
+
+export function AddToCartButton({ productId, productName, stockQuantity }: AddToCartButtonProps) {
   const t = useTranslations('products');
-  const tCart = useTranslations('cart');
-  const cart = useCart();
+  const addItem = useCart(state => state.addItem);
+  const loading = useCart(state => state.loading);
   const [quantity, setQuantity] = useState(1);
 
+  const outOfStock = stockQuantity <= 0;
+  const max = Math.max(1, Math.min(stockQuantity, 10));
+
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      cart.addItem(product);
-    }
-    toast.success(tCart('added', { name: product.nameKey }));
-    setQuantity(1);
+    void addItem(productId, quantity, productName);
   };
 
   return (
@@ -29,7 +33,8 @@ export function AddToCartButton({ product }: { product: Product }) {
           size="icon"
           className="h-10 w-10 rounded-full"
           onClick={() => setQuantity(Math.max(1, quantity - 1))}
-          disabled={quantity <= 1}
+          disabled={quantity <= 1 || outOfStock}
+          aria-label="decrement"
         >
           <Minus className="h-4 w-4" />
         </Button>
@@ -38,7 +43,9 @@ export function AddToCartButton({ product }: { product: Product }) {
           variant="ghost"
           size="icon"
           className="h-10 w-10 rounded-full"
-          onClick={() => setQuantity(quantity + 1)}
+          onClick={() => setQuantity(Math.min(max, quantity + 1))}
+          disabled={quantity >= max || outOfStock}
+          aria-label="increment"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -47,9 +54,10 @@ export function AddToCartButton({ product }: { product: Product }) {
       <Button
         className="h-14 flex-1 rounded-full bg-amber-600 px-8 text-lg hover:bg-amber-700"
         onClick={handleAddToCart}
+        disabled={outOfStock || loading}
       >
         <ShoppingBag className="me-2 h-5 w-5" />
-        {t('addToCart')}
+        {outOfStock ? t('outOfStock') : t('addToCart')}
       </Button>
     </div>
   );

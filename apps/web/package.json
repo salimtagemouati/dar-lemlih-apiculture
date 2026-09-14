@@ -1,5 +1,5 @@
 {
-  "name": "atlas-nectar-web",
+  "name": "dar-lemlih-web",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -8,9 +8,9 @@
     "build": "next build",
     "prebuild": "contentlayer build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest --passWithNoTests",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest --watch",
     "playwright:test": "playwright test"
   },

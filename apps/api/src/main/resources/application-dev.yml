@@ -1,0 +1,5 @@
+spring:
+  flyway:
+    # Dev profile loads core migrations PLUS dev-only seed (sample orders, addresses).
+    # User accounts are created at runtime by DataInitializer (no hardcoded hashes in SQL).
+    locations: classpath:db/migration,classpath:db/migration-dev

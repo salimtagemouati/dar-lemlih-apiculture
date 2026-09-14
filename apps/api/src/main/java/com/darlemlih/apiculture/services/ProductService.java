@@ -1,10 +1,11 @@
 package com.darlemlih.apiculture.services;
 
 import com.darlemlih.apiculture.dto.product.ProductDto;
-import com.darlemlih.apiculture.entities.Product;
 import com.darlemlih.apiculture.entities.Category;
-import com.darlemlih.apiculture.repositories.ProductRepository;
+import com.darlemlih.apiculture.entities.Product;
+import com.darlemlih.apiculture.exceptions.NotFoundException;
 import com.darlemlih.apiculture.repositories.CategoryRepository;
+import com.darlemlih.apiculture.repositories.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.Objects;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +30,13 @@ public class ProductService {
 
     public ProductDto getProductBySlug(String slug) {
         Product product = productRepository.findBySlug(slug)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new NotFoundException("PRODUCT_NOT_FOUND", "Product not found"));
         return toDto(product);
     }
 
     public ProductDto getById(Long id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new NotFoundException("PRODUCT_NOT_FOUND", "Product not found"));
         return toDto(product);
     }
 
@@ -58,14 +59,16 @@ public class ProductService {
 
     @Transactional
     public void delete(Long id) {
-        if (!productRepository.existsById(id)) return;
+        if (!productRepository.existsById(id)) {
+            throw new NotFoundException("PRODUCT_NOT_FOUND", "Product not found");
+        }
         productRepository.deleteById(id);
     }
 
     @Transactional
     public ProductDto update(Long id, ProductDto dto) {
         Product p = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new NotFoundException("PRODUCT_NOT_FOUND", "Product not found"));
         applyDto(p, dto);
         Product saved = productRepository.save(p);
         return toDto(saved);
@@ -91,19 +94,19 @@ public class ProductService {
                 .isHalal(product.getIsHalal())
                 .isActive(product.getIsActive())
                 .isFeatured(product.getIsFeatured())
-                .images(product.getImages())
+                .images(product.getImages() != null ? new ArrayList<>(product.getImages()) : new ArrayList<>())
                 .categoryId(product.getCategory() != null ? product.getCategory().getId() : null)
                 .categoryName(product.getCategory() != null ? product.getCategory().getNameFr() : null)
                 .build();
     }
 
-    @Transactional
-    protected void applyDto(Product p, ProductDto dto) {
+    private void applyDto(Product p, ProductDto dto) {
         if (dto.getSku() != null) p.setSku(dto.getSku());
         if (dto.getSlug() != null) p.setSlug(dto.getSlug());
         if (dto.getNameFr() != null) p.setNameFr(dto.getNameFr());
         if (dto.getNameEn() != null) p.setNameEn(dto.getNameEn());
         if (dto.getNameAr() != null) p.setNameAr(dto.getNameAr());
+        // Descriptions are nullable in the schema; explicit assignment allows clearing.
         p.setDescriptionFr(dto.getDescriptionFr());
         p.setDescriptionEn(dto.getDescriptionEn());
         p.setDescriptionAr(dto.getDescriptionAr());
@@ -118,8 +121,7 @@ public class ProductService {
         if (dto.getIsFeatured() != null) p.setIsFeatured(dto.getIsFeatured());
         if (dto.getImages() != null) p.setImages(dto.getImages());
         if (dto.getCategoryId() != null) {
-            Category category = categoryRepository.findById(dto.getCategoryId())
-                    .orElse(null);
+            Category category = categoryRepository.findById(dto.getCategoryId()).orElse(null);
             p.setCategory(category);
         }
     }

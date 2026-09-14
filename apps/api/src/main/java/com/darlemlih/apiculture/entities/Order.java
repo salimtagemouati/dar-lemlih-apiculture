@@ -26,6 +26,7 @@ public class Order extends BaseEntity {
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @lombok.Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
     
     @Column(nullable = false, precision = 10, scale = 2)
@@ -35,17 +36,26 @@ public class Order extends BaseEntity {
     private BigDecimal shippingCost;
     
     @Column(precision = 10, scale = 2)
+    @lombok.Builder.Default
     private BigDecimal discount = BigDecimal.ZERO;
     
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
     
     @Column(nullable = false)
+    @lombok.Builder.Default
     private String currency = "MAD";
     
     private String paymentProvider;
     
     private String paymentIntentId;
+
+    /**
+     * Stripe Checkout Session id (`cs_...`). Captured at session creation so the
+     * `checkout.session.completed` webhook can look up the order before the
+     * payment_intent id is even known.
+     */
+    private String stripeSessionId;
     
     private String trackingNumber;
     
@@ -56,5 +66,6 @@ public class Order extends BaseEntity {
     private String notes;
     
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @lombok.Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 }

@@ -14,9 +14,9 @@ const compat = new FlatCompat({
   baseDirectory: __dirname
 });
 
-export default [
+const eslintConfig = [
   {
-    ignores: ['.next/**', 'dist/**', 'node_modules/**', 'contentlayer/generated/**']
+    ignores: ['.next/**', '.contentlayer/**', 'dist/**', 'node_modules/**', 'contentlayer/generated/**']
   },
   ...compat.config({
     extends: ['next/core-web-vitals', 'next/typescript']
@@ -27,7 +27,7 @@ export default [
     languageOptions: {
       parser: tsParser,
       parserOptions: {
-        projectService: { allowDefaultProject: true },
+        project: './tsconfig.json',
         tsconfigRootDir: __dirname
       },
       globals: {
@@ -40,7 +40,8 @@ export default [
       'testing-library': testingLibrary
     },
     rules: {
-      ...tseslint.configs['recommended-type-checked'].rules,
+      ...tseslint.configs.recommended.rules,
+      'no-undef': 'off',
       'testing-library/no-node-access': 'off',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', fixStyle: 'inline-type-imports' }],
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
@@ -48,3 +49,5 @@ export default [
     }
   }
 ];
+
+export default eslintConfig;

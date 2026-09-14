@@ -51,6 +51,21 @@ public class S3FileStorageService implements FileStorageService {
         }
     }
 
+    @Override
+    public void delete(String key) {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+        try {
+            s3Client.deleteObject(builder -> builder
+                    .bucket(awsProperties.getS3().getBucket())
+                    .key(key));
+            log.debug("Deleted S3 object with key '{}'", key);
+        } catch (S3Exception e) {
+            throw new StorageException("Unable to delete file '" + key + "' from S3", e);
+        }
+    }
+
     private String buildObjectKey(String directory, String extension) {
         String generatedName = UUID.randomUUID().toString().replace("-", "") + extension;
         if (!StringUtils.hasText(directory)) {

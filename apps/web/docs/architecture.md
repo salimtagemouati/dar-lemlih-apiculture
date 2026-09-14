@@ -1,77 +1,101 @@
-# Dar Lemlih Web – Next.js App Router Architecture
+# Dar Lemlih Web — Architecture overview
 
-## High-level goals
-- Deliver a luxury Moroccan apiculture storefront with AR/FR/EN locales, RTL/LTR support, and first-class accessibility.
-- Build on Next.js App Router with server components, ISR, and robust SEO metadata out of the box.
-- Centralize design tokens via shadcn/ui while keeping brand-specific styling consistent across devices.
-- Provide secure authentication powered by Supabase with client/server helpers and protected routes.
-- Maintain resilient commerce primitives: product catalog, variant-aware PDP, persisted cart, and Stripe-powered checkout.
+## Goals
 
-## Directory layout (target)
+- Build on the Next.js App Router with Server Components, fluid SSR, and rich SEO metadata out of the box.
+- Centralize design tokens via Tailwind + Radix UI primitives and a Cormorant Garamond × Inter typography pair.
+- Talk to a single source of truth (the Spring Boot API) for catalog, cart, orders, payments, and authentication. No client-side persistence of user data.
+- Maintain resilient commerce primitives: product catalog, variant-aware PDP, server-synced cart, Stripe-powered checkout, account dashboard.
+
+## Tech stack
+
+- **Framework**: Next.js 14 App Router + TypeScript.
+- **Styling**: Tailwind CSS 3.4, `tailwindcss-animate`, Radix UI primitives, custom design tokens.
+- **State**: Server Actions + a thin Zustand cart store synced to the API.
+- **Forms / validation**: react-hook-form + zod.
+- **i18n**: next-intl (fr/en/ar with RTL).
+- **Notifications**: Sonner.
+- **Auth/payments backend**: Spring Boot REST API (see `apps/api`). The web app NEVER stores secrets; all sensitive operations cross the network to the API.
+
+## Directory structure (live)
+
 ```
-apps/web/
- ├── app/
- │   ├── (marketing)/                # localized marketing routes with shared layout
- │   │   ├── [locale]/
- │   │   │   ├── (routes)/
- │   │   │   │   ├── page.tsx       # localized homepage
- │   │   │   │   ├── products/
- │   │   │   │   │   ├── page.tsx   # product listing w/ filters
- │   │   │   │   ├── products/[slug]/page.tsx
- │   │   │   │   ├── story/page.tsx
- │   │   │   │   ├── blog/page.tsx  # MDX contentlayer feed
- │   │   │   │   ├── blog/[slug]/page.tsx
- │   │   │   │   ├── recipes/page.tsx
- │   │   │   │   └── recipes/[slug]/page.tsx
- │   ├── (account)/[locale]/         # gated routes (account, orders, checkout)
- │   ├── api/                        # route handlers (Supabase auth hooks, cart persistence, Stripe webhooks)
- │   ├── layout.tsx                  # root metadata, font loading, Providers
- │   └── middleware.ts               # auth guard + locale router
- ├── components/
- │   ├── ui/                         # shadcn generated primitives (button, dialog, badge…)
- │   ├── blocks/                     # Brand-specific sections (Hero, FeatureGrid, Steps, Testimonials)
- │   ├── commerce/                   # ProductCard, ProductGallery, AddToCartButton, CartDrawer
- │   ├── layout/                     # Navbar, Footer, LocaleSwitcher, CookieBanner
- │   └── forms/                      # AuthDialog forms, newsletter sign-up
- ├── lib/
- │   ├── supabase/
- │   │   ├── client.ts               # browser Supabase client (anon key only)
- │   │   └── server.ts               # server Supabase client wired to cookies
- │   ├── stripe.ts                   # Stripe server helper
- │   ├── intl/
- │   │   ├── routing.ts              # next-intl locale routing helpers
- │   │   └── messages.ts             # message catalog loader
- │   ├── filters.ts                  # product filtering logic (shared)
- │   ├── analytics.ts                # @vercel/analytics + speed insights
- │   └── constants.ts                # brand colors, typography tokens
- ├── content/
- │   ├── blog/                       # MDX posts (contentlayer)
- │   ├── recipes/
- │   └── story/
- ├── data/
- │   ├── products.json               # seed fixtures until CMS is connected
- │   └── locales/                    # AR/FR/EN message JSON
- ├── stores/                         # zustand slices (cart, currency) w/ persistence
- ├── tests/
- │   ├── unit/                       # Vitest + Testing Library
- │   └── e2e/                        # Playwright smoke tests
- ├── public/                         # static assets (hero, badges, blur placeholders)
- ├── styles/                         # tailwind config, typography utilities, prose theme
- ├── next.config.mjs
- ├── tailwind.config.ts
- ├── tsconfig.json
- └── README.md
+apps/web/src/
+├── app/
+│   ├── (marketing)/[locale]/
+│   │   ├── page.tsx                       # Home
+│   │   ├── products/page.tsx              # Catalog (Server Component, calls getProducts)
+│   │   ├── products/[slug]/page.tsx       # PDP
+│   │   ├── products/[slug]/add-to-cart-button.tsx
+│   │   ├── products/loading.tsx           # Suspense skeleton
+│   │   ├── story/page.tsx, blog/page.tsx, contact/page.tsx
+│   │   ├── checkout/page.tsx + checkout-form.tsx
+│   │   ├── checkout/success/page.tsx, cancel/page.tsx
+│   │   ├── account/layout.tsx + page.tsx + account-sidebar.tsx
+│   │   ├── account/orders/page.tsx + loading.tsx
+│   │   └── account/orders/[orderNumber]/page.tsx
+│   ├── (auth)/[locale]/
+│   │   ├── login/page.tsx
+│   │   └── reset-password/page.tsx + reset-password-form.tsx
+│   ├── actions/                           # Server Actions
+│   │   ├── auth.ts                        # login / register / refresh / logout / getSession / forgotPassword
+│   │   ├── cart.ts
+│   │   ├── checkout.ts
+│   │   ├── contact.ts
+│   │   └── password.ts
+│   ├── globals.css                        # tokens + animations
+│   ├── layout.tsx                         # fonts (Cormorant Garamond / Inter / Noto Sans Arabic) + Providers
+│   └── providers.tsx                      # ThemeProvider + Tooltip + Sonner + CartHydrator
+├── components/
+│   ├── blocks/                            # Hero, FeatureGrid, ProductCatalog, Steps, SocialProof, ContactForm
+│   ├── layout/                            # SiteHeader, SiteFooter, CartSheet, LocaleSwitcher, ThemeToggle, UserAccountNav, CookieBanner
+│   ├── account/order-status-badge.tsx
+│   ├── checkout/stepper.tsx
+│   ├── cart-hydrator.tsx                  # Mounts useCart.hydrate() once on first client render
+│   └── ui/                                # Radix UI primitives + custom Skeleton helpers
+├── lib/
+│   ├── api/                               # Typed API client (apiFetch / apiFetchClient)
+│   │   ├── client.ts, types.ts, auth.ts, products.ts, cart.ts, orders.ts, contact.ts
+│   ├── format.ts                          # formatPriceMAD, formatDate, localizedProductName, resolveImageUrl
+│   ├── hooks/use-cart.ts                  # Zustand store synced via Server Actions
+│   ├── hooks/use-in-view.ts
+│   └── utils.ts                           # cn()
+├── i18n/
+│   ├── routing.ts, request.ts, messages/{fr,en,ar}.json
+└── middleware.ts                          # locale router + protected-segment auth gate
 ```
 
-## Key architectural decisions
-- **Localization**: `next-intl` provides per-locale routing (`/ar`, `/fr`, `/en`) with automatic `dir` handling. Middleware reads the locale from the path, sets `lang` and `dir`, and falls back to browser language.
-- **Auth**: Supabase SSR helpers manage cookie-based sessions. Middleware guards `/account`, `/orders`, and `/checkout`, redirecting anonymous users to a locale-aware login route handled by the AuthDialog.
-- **Design system**: Use shadcn/ui generator to bootstrap primitives, then extend via Tailwind tokens (`rounded-3xl`, `bg-desert-50`, `text-amber-700`). All custom components consume these primitives for consistency.
-- **Commerce**: Products originate from Supabase (preferred) or JSON fixtures. Product pages render structured data (Product, BreadcrumbList) with incremental static regeneration (`revalidate` per product).
-- **Cart flow**: Zustand maintains client cart state; authenticated users sync to Supabase via route handlers. Checkout delegates to Stripe Checkout Sessions with success/cancel URLs.
-- **Content**: contentlayer compiles MDX files into typed data. Admin interface (future) lives under `/[locale]/admin` behind RBAC guards.
-- **Performance**: Use `next/image` with `blurDataURL`, prefetch hero assets, apply `backdrop-blur` only to glass cards, and register `@vercel/analytics` + `@vercel/speed-insights`.
-- **Testing**: Strict TypeScript mode and ESLint guard regressions; Vitest covers components; Playwright ensures auth, cart, checkout, and locale flows run without “Failed to fetch” errors.
+## Auth & session lifecycle
 
-This document will guide the migration from the existing Vite SPA to the Next.js App Router implementation while ensuring parity and unlocking the requested enhancements.
+```
+Browser                          Next.js (server)               Spring API
+   │                                  │                             │
+   │── Action: login(form) ───────────▶                             │
+   │                                  ├── POST /api/auth/login ───▶│
+   │                                  │◀── AuthResponse ────────────│
+   │                                  ├── set 'dar-lemlih-token'   │
+   │                                  │   set 'dar-lemlih-refresh' │
+   │◀── render(redirect)──────────────│                             │
+   │                                  │                             │
+   │── apiFetch(/cart) ──────────────▶│── GET /api/cart (Bearer) ─▶│
+   │                                  │◀── 401 if expired ──────────│
+   │                                  ├── refreshAction ──────────▶│
+   │                                  │── POST /api/auth/refresh ─▶│
+   │                                  │◀── new tokens ─────────────│
+   │                                  │── retry GET /api/cart ───▶│
+   │◀── CartDto ──────────────────────│                             │
+```
 
+The middleware (`src/middleware.ts`) double-checks: protected segments (`account`, `orders`, `checkout`) redirect unauthenticated requests to `/[locale]/login` based on the access cookie's presence. Server-side pages additionally call `getSessionAction()` to fail closed if the token is rejected.
+
+## Cart
+
+`useCart` is a Zustand store backed by Server Actions in `app/actions/cart.ts`. Mutations are routed through the API; the store mirrors the response. Free-shipping threshold (500 MAD) is computed client-side from the authoritative server `subtotal` for display only — pricing is always the API's responsibility.
+
+## Checkout
+
+1. `/[locale]/checkout` — Server Component, reads `getSessionAction` (redirect if absent) and `getCart` (redirect to empty-cart if no items).
+2. `CheckoutForm` (client) collects shipping details with `react-hook-form` + zod, posts via `checkoutAction → POST /api/orders/checkout`.
+3. The backend creates a Stripe Checkout Session, persists `orders.stripe_session_id`, and returns `paymentUrl`.
+4. The browser navigates to `paymentUrl`; Stripe redirects to `/[locale]/checkout/success?order=…` (or `/cancel`).
+5. On webhook completion the backend flips the order to `PAID` (idempotently) and queues a confirmation email.

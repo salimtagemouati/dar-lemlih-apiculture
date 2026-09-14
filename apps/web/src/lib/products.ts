@@ -1,80 +1,10 @@
-export const PRODUCTS = [
-  {
-    id: 'thyme-atlas',
-    category: 'honey',
-    image: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=800&q=80',
-    price: 38,
-    weight: '250g',
-    origin: 'High Atlas',
-    rating: 4.9,
-    nameKey: 'Wild Thyme',
-    descKey: 'Altitude 2,400m',
-    featured: true,
-    description: 'Harvested from the rocky slopes of the High Atlas at 2,400m altitude. This rare thyme honey is prized for its intense herbal aroma and exceptional mineral content.',
-  },
-  {
-    id: 'euphorbia-souss',
-    category: 'honey',
-    image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?auto=format&fit=crop&w=800&q=80',
-    price: 42,
-    weight: '250g',
-    origin: 'Souss Valley',
-    rating: 4.8,
-    nameKey: 'Euphorbia Daghmous',
-    descKey: 'Souss-Massa',
-    featured: true,
-    description: 'A legendary Moroccan honey with a distinctive spicy kick. Known locally as Daghmous, it is harvested in the arid Souss-Massa region and is highly sought after for its wellness properties.',
-  },
-  {
-    id: 'orange-blossom',
-    category: 'honey',
-    image: 'https://images.unsplash.com/photo-1471943311424-646960669fbc?auto=format&fit=crop&w=800&q=80',
-    price: 32,
-    weight: '250g',
-    origin: 'Fès-Meknès',
-    rating: 4.7,
-    nameKey: 'Orange Blossom',
-    descKey: 'Fès-Meknès region',
-    featured: false,
-    description: 'Light, floral, and elegantly sweet. Our orange blossom honey is collected from the citrus groves surrounding the historic city of Fès during the spring bloom.',
-  },
-  {
-    id: 'carob-rif',
-    category: 'honey',
-    image: 'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&w=800&q=80',
-    price: 35,
-    weight: '250g',
-    origin: 'Rif Mountains',
-    rating: 4.6,
-    nameKey: 'Carob Honey',
-    descKey: 'Chefchaouen region',
-    featured: false,
-    description: 'A dark, chocolatey honey with malty undertones. Harvested from the wild carob trees of the Rif Mountains, it offers a rich and complex flavor profile.',
-  },
-  {
-    id: 'pollen-atlas',
-    category: 'pollen',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=80',
-    price: 28,
-    weight: '150g',
-    origin: 'Middle Atlas',
-    rating: 4.8,
-    nameKey: 'Wildflower Pollen',
-    descKey: 'Ifrane cedars',
-    featured: false,
-    description: 'Pure wildflower pollen collected by bees in the pristine cedar forests of the Middle Atlas. A nutrient-dense superfood for your daily wellness ritual.',
-  },
-  {
-    id: 'propolis-tincture',
-    category: 'propolis',
-    image: 'https://images.unsplash.com/photo-1612540139150-4e678e0da5e2?auto=format&fit=crop&w=800&q=80',
-    price: 25,
-    weight: '30ml',
-    origin: 'High Atlas',
-    rating: 4.9,
-    nameKey: 'Propolis Tincture',
-    descKey: 'Pure extract',
-    featured: false,
-    description: 'High-potency propolis extract gathered from the High Atlas. Bees use propolis to protect the hive; we use it to support natural defenses.',
-  },
-];
+/**
+ * Legacy export kept for backward-compatibility with old imports.
+ * The real product catalog now comes from the Spring Boot API via
+ * {@code @/lib/api/products}. This file is intentionally empty so that
+ * any straggling import will surface as a TypeScript error.
+ *
+ * @deprecated Use {@code getProducts}/{@code getProductBySlug} from
+ *             {@code @/lib/api/products} instead.
+ */
+export {};

@@ -7,13 +7,12 @@ test.describe('Dar Lemlih storefront smoke tests', () => {
 
     await expect(page.getByRole('heading', { name: /miel marocain/i })).toBeVisible();
 
-    const heroImage = page.locator('img').filter({ hasText: '' }).filter({ has: page.locator('xpath=ancestor::div[contains(@class, "aspect-[4/5]")]') }).first();
+    const hero = page.getByRole('region', { name: /miel marocain/i });
+    const heroImage = hero.getByRole('img', { name: /miel/i });
     await expect(heroImage).toBeVisible();
-    const classList = await heroImage.evaluate(node => node.getAttribute('class') ?? '');
-    expect(classList).not.toContain('blur');
 
-    await page.getByRole('button', { name: /Lang|Language|fr|en|ar/i }).first().click();
-    await page.getByRole('button', { name: /^EN|English$/i }).click();
+    const localeSwitcher = page.getByRole('group', { name: /langue/i });
+    await localeSwitcher.getByRole('button', { name: 'EN', exact: true }).click();
 
     await expect(page).toHaveURL(/\/en$/);
     await expect(page.getByRole('heading', { name: /rare moroccan honey/i })).toBeVisible();

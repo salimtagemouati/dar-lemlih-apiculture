@@ -7,7 +7,7 @@ const STEP_KEYS = ['foraging', 'harvest', 'analysis', 'craft'] as const;
 
 const STEP_EMOJIS = ['🌸', '🌅', '🔬', '🍯'] as const;
 
-export function Steps({ locale }: { locale: string }) {
+export function Steps({ locale: _locale }: { locale: string }) {
   const t = useTranslations('steps');
 
   return (

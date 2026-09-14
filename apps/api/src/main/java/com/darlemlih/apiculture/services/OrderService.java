@@ -3,26 +3,36 @@ package com.darlemlih.apiculture.services;
 import com.darlemlih.apiculture.dto.order.*;
 import com.darlemlih.apiculture.entities.*;
 import com.darlemlih.apiculture.entities.enums.OrderStatus;
+import com.darlemlih.apiculture.exceptions.BadRequestException;
+import com.darlemlih.apiculture.exceptions.ConflictException;
+import com.darlemlih.apiculture.exceptions.NotFoundException;
+import com.darlemlih.apiculture.exceptions.UnauthorizedException;
 import com.darlemlih.apiculture.payments.PaymentGateway;
 import com.darlemlih.apiculture.payments.PaymentSession;
 import com.darlemlih.apiculture.repositories.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
+import java.security.SecureRandom;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Slf4j
 public class OrderService {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private OrderService self;
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -34,55 +44,81 @@ public class OrderService {
     @Value("${app.web-base-url}")
     private String webBaseUrl;
 
-    private static final BigDecimal SHIPPING_COST = new BigDecimal("30.00");
+    @Value("${payment.stripe.success-url:${app.web-base-url}/checkout/success}")
+    private String successUrlBase;
 
+    @Value("${payment.stripe.cancel-url:${app.web-base-url}/checkout/cancel}")
+    private String cancelUrlBase;
+
+    @Value("${app.email.admin:${app.mail.admin:}}")
+    private String adminEmail;
+
+    @Value("${app.shipping-cost:30.00}")
+    private BigDecimal shippingCost;
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int MAX_ORDER_NUMBER_RETRIES = 5;
+
+    @Transactional(readOnly = true)
     public Page<OrderDto> getUserOrders(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        return orderRepository.findByUser(user, pageable)
-                .map(this::toDto);
+                .orElseThrow(() -> new NotFoundException("USER_NOT_FOUND", "User not found"));
+        return orderRepository.findByUser(user, pageable).map(this::toDto);
     }
 
+    @Transactional(readOnly = true)
     public OrderDto getOrder(String userEmail, String orderNumber) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
-        
+                .orElseThrow(() -> new NotFoundException("USER_NOT_FOUND", "User not found"));
+
+        Order order = orderRepository.findByOrderNumberWithItems(orderNumber)
+                .orElseThrow(() -> new NotFoundException("ORDER_NOT_FOUND", "Order not found"));
+
         if (!order.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("Unauthorized access to order");
+            // 403, not 500. Use NotFoundException to also avoid leaking that the order exists.
+            throw new UnauthorizedException("ORDER_FORBIDDEN", "You do not have access to this order");
         }
-        
         return toDto(order);
     }
 
     public CheckoutResponse checkout(String userEmail, CheckoutRequest request) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        Cart cart = cartRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
-        
-        if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
-        }
-        
-        // Verify stock availability
-        for (CartItem item : cart.getItems()) {
-            if (item.getProduct().getStockQuantity() < item.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for product: " + item.getProduct().getNameFr());
+        OptimisticLockingFailureException lastError = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            try {
+                return self.performCheckout(userEmail, request);
+            } catch (OptimisticLockingFailureException e) {
+                lastError = e;
+                log.debug("Optimistic-lock conflict on checkout (attempt {}): {}", attempt + 1, e.getMessage());
+                try { Thread.sleep(50); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
         }
-        
-        // Create order
-        Order order = createOrder(user, cart, request);
-        
-        // Create payment session
-        String successUrl = webBaseUrl + "/orders/" + order.getOrderNumber() + "/success";
-        String cancelUrl = webBaseUrl + "/checkout";
-        
+        throw new ConflictException("STOCK_CONFLICT",
+                "Could not finalize the order — stock changed during checkout. Please retry. (" +
+                        (lastError != null ? lastError.getMessage() : "unknown") + ")");
+    }
+
+    @Transactional
+    public CheckoutResponse performCheckout(String userEmail, CheckoutRequest request) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new NotFoundException("USER_NOT_FOUND", "User not found"));
+
+        Cart cart = cartRepository.findByUser(user)
+                .orElseThrow(() -> new BadRequestException("CART_EMPTY", "Cart is empty"));
+
+        if (cart.getItems().isEmpty()) {
+            throw new BadRequestException("CART_EMPTY", "Cart is empty");
+        }
+
+        // Call persistOrder directly (no inner retry loop)
+        Order order = persistOrder(user, cart, request);
+
+        // Build per-order success/cancel URLs so the frontend can show the
+        // confirmation for the right order.
+        String orderQuery = "?order=" + java.net.URLEncoder.encode(order.getOrderNumber(), java.nio.charset.StandardCharsets.UTF_8);
+        String successUrl = successUrlBase + (successUrlBase.contains("?") ? "&" : "") + orderQuery.substring(1);
+        String cancelUrl = cancelUrlBase;
+
+        // Create payment session with stripe_session_id captured.
         PaymentSession session = paymentGateway.createCheckoutSession(
                 order.getOrderNumber(),
                 order.getTotal(),
@@ -90,23 +126,25 @@ public class OrderService {
                 successUrl,
                 cancelUrl
         );
-        
-        order.setPaymentIntentId(session.getPaymentIntentId());
-        orderRepository.save(order);
-        
-        // Clear cart
-        cart.getItems().clear();
-        cartRepository.save(cart);
 
-        // Non-blocking emails (confirmation + admin notification)
+        order.setStripeSessionId(session.getSessionId());
+        if (session.getPaymentIntentId() != null) {
+            order.setPaymentIntentId(session.getPaymentIntentId());
+        }
+        orderRepository.save(order);
+
+        // Clear cart with custom JPQL bulk delete to prevent N+1 query amplification
+        cartRepository.clearCartItems(cart.getId());
+        cart.getItems().clear();
+
+        // Order confirmation is sent by the webhook handler when payment succeeds, NOT here.
+        // Admin notification of "new (pending) order" is fine to send synchronously.
         try {
-            emailService.sendOrderConfirmationEmail(user.getEmail(), order.getOrderNumber());
-        } catch (Exception ignored) {}
-        try {
-            String adminEmail = System.getenv("APP_EMAIL_ADMIN");
             String totalSummary = order.getTotal() + " " + order.getCurrency();
             emailService.sendNewOrderAdminNotification(order.getOrderNumber(), user.getEmail(), totalSummary, adminEmail);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            log.warn("Admin notification failed for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
 
         return CheckoutResponse.builder()
                 .orderNumber(order.getOrderNumber())
@@ -116,61 +154,104 @@ public class OrderService {
                 .build();
     }
 
-    private Order createOrder(User user, Cart cart, CheckoutRequest request) {
+    private Order persistOrder(User user, Cart cart, CheckoutRequest request) {
+        // Re-read each cart product fresh and check stock atomically with the version field.
+        for (CartItem item : cart.getItems()) {
+            Product product = productRepository.findById(item.getProduct().getId())
+                    .orElseThrow(() -> new NotFoundException("PRODUCT_NOT_FOUND",
+                            "Product not found: " + item.getProduct().getId()));
+            if (product.getStockQuantity() < item.getQuantity()) {
+                throw new ConflictException("INSUFFICIENT_STOCK",
+                        "Insufficient stock for product: " + product.getNameFr());
+            }
+        }
+
         BigDecimal subtotal = cart.getTotal();
-        BigDecimal total = subtotal.add(SHIPPING_COST);
-        
+        BigDecimal total = subtotal.add(shippingCost);
+
+        ShippingAddressDto src = request.getShippingAddress();
         ShippingAddress shippingAddress = ShippingAddress.builder()
-                .name(request.getShippingAddress().getName())
-                .phone(request.getShippingAddress().getPhone())
-                .line1(request.getShippingAddress().getLine1())
-                .line2(request.getShippingAddress().getLine2())
-                .city(request.getShippingAddress().getCity())
-                .region(request.getShippingAddress().getRegion())
-                .postalCode(request.getShippingAddress().getPostalCode())
-                .country(request.getShippingAddress().getCountry())
+                .name(src.getName())
+                .phone(src.getPhone())
+                .line1(src.getLine1())
+                .line2(src.getLine2())
+                .city(src.getCity())
+                .region(src.getRegion())
+                .postalCode(src.getPostalCode())
+                .country(src.getCountry())
                 .build();
-        
-        Order order = Order.builder()
-                .orderNumber(generateOrderNumber())
-                .user(user)
-                .status(OrderStatus.PENDING)
-                .subtotal(subtotal)
-                .shippingCost(SHIPPING_COST)
-                .discount(BigDecimal.ZERO)
-                .total(total)
-                .currency("MAD")
-                .paymentProvider(request.getPaymentMethod())
-                .shippingAddress(shippingAddress)
-                .notes(request.getNotes())
-                .items(new java.util.ArrayList<>())
-                .build();
-        
-        order = orderRepository.save(order);
-        
-        // Create order items
+
+        // Generate a unique order number with retry on collision (DB unique constraint).
+        Order order = null;
+        DataIntegrityViolationException lastConflict = null;
+        for (int i = 0; i < MAX_ORDER_NUMBER_RETRIES; i++) {
+            Order candidate = Order.builder()
+                    .orderNumber(generateOrderNumber())
+                    .user(user)
+                    .status(OrderStatus.PENDING)
+                    .subtotal(subtotal)
+                    .shippingCost(shippingCost)
+                    .discount(BigDecimal.ZERO)
+                    .total(total)
+                    .currency("MAD")
+                    .paymentProvider(request.getPaymentMethod())
+                    .shippingAddress(shippingAddress)
+                    .notes(request.getNotes())
+                    .items(new java.util.ArrayList<>())
+                    .build();
+            try {
+                order = orderRepository.saveAndFlush(candidate);
+                break;
+            } catch (DataIntegrityViolationException e) {
+                lastConflict = e;
+                log.debug("Order number collision, retrying (attempt {})", i + 1);
+            }
+        }
+        if (order == null) {
+            throw new ConflictException("ORDER_NUMBER_COLLISION",
+                    "Could not generate a unique order number after " + MAX_ORDER_NUMBER_RETRIES + " attempts. ("
+                            + (lastConflict != null ? lastConflict.getMessage() : "unknown") + ")");
+        }
+
+        // Create order items + decrement product stock with optimistic locking.
         for (CartItem cartItem : cart.getItems()) {
+            Product product = productRepository.findById(cartItem.getProduct().getId())
+                    .orElseThrow(() -> new NotFoundException("PRODUCT_NOT_FOUND", "Product no longer exists"));
+
+            int newStock = product.getStockQuantity() - cartItem.getQuantity();
+            if (newStock < 0) {
+                // Another transaction got there first; surface as a conflict.
+                throw new ConflictException("INSUFFICIENT_STOCK",
+                        "Insufficient stock for product: " + product.getNameFr());
+            }
+            product.setStockQuantity(newStock);
+            productRepository.saveAndFlush(product); // triggers @Version check
+
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .product(cartItem.getProduct())
+                    .product(product)
                     .quantity(cartItem.getQuantity())
-                    .unitPrice(cartItem.getProduct().getPrice())
-                    .totalPrice(cartItem.getProduct().getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
+                    .unitPrice(product.getPrice())
+                    .totalPrice(product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
                     .build();
             order.getItems().add(orderItem);
-            
-            // Update stock
-            Product product = cartItem.getProduct();
-            product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
-            productRepository.save(product);
         }
-        
         return orderRepository.save(order);
     }
 
+    /**
+     * Generates an order number of the form ORD-YYYY-XXXXXXXX, using a SecureRandom-backed
+     * 8-char Crockford-style suffix. Combined with a unique constraint + retry on
+     * collision, this gives effectively zero collisions in practice.
+     */
     private String generateOrderNumber() {
-        return "ORD-" + LocalDateTime.now().getYear() + "-" + 
-               String.format("%06d", (long) (Math.random() * 999999));
+        int year = java.time.LocalDate.now().getYear();
+        // 8 hex chars from a random 32-bit value -> 4 billion possible suffixes per year
+        int suffix = RANDOM.nextInt() & 0x7FFFFFFF;
+        // Mix in a UUID-derived nibble so two threads sharing the same RNG state diverge
+        long mix = UUID.randomUUID().getLeastSignificantBits();
+        long combined = ((long) suffix << 4) ^ (mix & 0xF);
+        return String.format("ORD-%d-%08X", year, (int) (combined & 0xFFFFFFFFL));
     }
 
     private OrderDto toDto(Order order) {
@@ -196,7 +277,6 @@ public class OrderService {
 
     private ShippingAddressDto toShippingDto(ShippingAddress address) {
         if (address == null) return null;
-        
         return ShippingAddressDto.builder()
                 .name(address.getName())
                 .phone(address.getPhone())

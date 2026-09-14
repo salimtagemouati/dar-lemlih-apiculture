@@ -46,7 +46,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-2 text-charcoal-500 transition hover:bg-sand-50 hover:text-charcoal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:text-charcoal-200 dark:hover:bg-charcoal-800">
+      <DialogPrimitive.Close className="absolute end-4 top-4 rounded-full p-2 text-charcoal-500 transition hover:bg-sand-50 hover:text-charcoal-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:text-charcoal-200 dark:hover:bg-charcoal-800">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -56,7 +56,7 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col gap-2 text-center sm:text-left', className)} {...props} />
+  <div className={cn('flex flex-col gap-2 text-center sm:text-start', className)} {...props} />
 );
 DialogHeader.displayName = 'DialogHeader';
 

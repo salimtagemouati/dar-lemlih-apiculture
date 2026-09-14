@@ -10,6 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @SpringBootTest
@@ -25,11 +26,13 @@ class EmailServiceTest {
     @Test
     void sendsOrderConfirmation() {
         emailService.sendOrderConfirmationEmail("test@example.com", "ORD-TEST-123");
+
+        // EmailService methods are @Async; wait briefly for the executor to run.
         ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-        verify(mailSender).send(captor.capture());
+        verify(mailSender, timeout(2000)).send(captor.capture());
+
         SimpleMailMessage msg = captor.getValue();
         assertThat(msg.getTo()).contains("test@example.com");
         assertThat(msg.getSubject()).contains("ORD-TEST-123");
     }
 }
-

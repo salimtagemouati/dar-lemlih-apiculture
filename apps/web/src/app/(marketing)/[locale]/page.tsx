@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getTranslations } from 'next-intl/server';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@/i18n/routing';
 import { Hero } from '@/components/blocks/hero';
 import { FeatureGrid } from '@/components/blocks/feature-grid';
@@ -23,20 +23,20 @@ export async function generateMetadata({ params }: { params: { locale: Locale } 
 
 export default async function LocaleHomePage({ params }: { params: { locale: Locale } }) {
   const { locale } = params;
+  setRequestLocale(locale);
+
   const tCta = await getTranslations({ locale, namespace: 'cta' });
   const tCommon = await getTranslations({ locale, namespace: 'common' });
 
   return (
     <div className="space-y-0">
-      {/* Hero */}
-      <Section>
-        <Hero locale={locale} />
-      </Section>
+      {/* Hero — full-bleed, no Section wrapper so the bg image touches the viewport edge */}
+      <Hero locale={locale} />
 
       {/* USP Features */}
       <Section id="usp" background="warm">
         <div className="mb-12 text-center">
-          <h2 className="font-display text-heading text-charcoal-900 dark:text-amber-50">
+          <h2 className="font-display text-heading text-stone-900 dark:text-amber-50">
             {tCta('story')}
           </h2>
         </div>

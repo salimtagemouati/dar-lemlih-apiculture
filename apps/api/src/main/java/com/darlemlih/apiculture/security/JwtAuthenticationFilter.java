@@ -1,5 +1,6 @@
 package com.darlemlih.apiculture.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,28 +24,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, 
-                                  HttpServletResponse response, 
-                                  FilterChain filterChain) throws ServletException, IOException {
-        
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
-        
+        String jwt = authHeader.substring(7);
+
         try {
-            userEmail = jwtUtils.extractUsername(jwt);
+            String userEmail = jwtUtils.extractUsername(jwt);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-                
-                if (jwtUtils.validateToken(jwt, userDetails)) {
+
+                if (Boolean.TRUE.equals(jwtUtils.validateToken(jwt, userDetails))) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -54,8 +53,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
+        } catch (JwtException jwtEx) {
+            // Log only the message; do NOT log the JWT itself.
+            logger.debug("JWT validation failed: " + jwtEx.getMessage());
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e);
+            // Anything else (e.g. user lookup failure) — fail closed and log only the type.
+            logger.warn("Unexpected error during JWT auth: " + e.getClass().getSimpleName());
         }
 
         filterChain.doFilter(request, response);

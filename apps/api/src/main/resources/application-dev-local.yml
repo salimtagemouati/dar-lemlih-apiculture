@@ -11,6 +11,7 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
   flyway:
     enabled: true
+    locations: classpath:db/migration,classpath:db/migration-dev
   mail:
     host: localhost
     port: 1025
@@ -21,6 +22,7 @@ server:
 app:
   base-url: http://localhost:8080
 
+# Millisecond JWT settings (15 min / 7 days)
 jwt:
-  access-ttl-min: 15
-  refresh-ttl-days: 7
+  access-token-expiration: 900000
+  refresh-token-expiration: 604800000
