@@ -14,6 +14,12 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<Order> findLockedByStripeSessionId(String value);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<Order> findLockedByPaymentIntentId(String value);
+
     Optional<Order> findByOrderNumber(String orderNumber);
     Page<Order> findByUser(User user, Pageable pageable);
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);

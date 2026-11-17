@@ -146,8 +146,10 @@ public class PaymentService {
 
         RefundResult result = paymentGateway.refund(paymentIntentId, refundAmount);
 
-        order.setStatus(OrderStatus.REFUNDED);
-        orderRepository.save(order);
+        if ("succeeded".equals(result.getStatus()) && order.getTotal().compareTo(result.getAmount()) == 0) {
+            order.setStatus(OrderStatus.REFUNDED);
+            orderRepository.save(order);
+        }
 
         log.info("Refund processed: {} for order {}", result.getRefundId(), order.getOrderNumber());
 

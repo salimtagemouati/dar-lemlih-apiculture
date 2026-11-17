@@ -70,7 +70,13 @@ public class PaymentWebhookService {
         String eventType = json.path("type").asText();
 
         // 1. Save incoming webhook in its own transaction (committed immediately)
-        WebhookEvent event = self.saveWebhookEvent(eventId, eventType, payload, signature);
+        WebhookEvent event;
+        try {
+            event = self.saveWebhookEvent(eventId, eventType, payload, signature);
+        } catch (DataIntegrityViolationException conflict) {
+            event = webhookEventRepository.findByEventId(eventId).orElseThrow(() -> conflict);
+            if (Boolean.TRUE.equals(event.getProcessed())) return;
+        }
         if (event == null) {
             // Duplicate event, skip processing
             return;
@@ -78,10 +84,10 @@ public class PaymentWebhookService {
 
         try {
             // 2. Process actual order status updates and emails in standard transactional context
-            self.processBusinessLogic(json, eventType);
+            self.processOnce(event.getId(), json, eventType);
 
             // 3. Mark processed in its own transaction (committed immediately)
-            self.markWebhookEventProcessed(event.getId());
+
         } catch (Exception e) {
             // 4. Mark failed in its own transaction (committed immediately) so audit is preserved
             self.markWebhookEventFailed(event.getId(), e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -100,34 +106,23 @@ public class PaymentWebhookService {
                 .signature(signature)
                 .processed(false)
                 .build();
-        try {
-            return webhookEventRepository.saveAndFlush(event);
-        } catch (DataIntegrityViolationException duplicate) {
-            Optional<WebhookEvent> existing = webhookEventRepository.findByEventId(eventId);
-            if (existing.isPresent()
-                    && !Boolean.TRUE.equals(existing.get().getProcessed())
-                    && existing.get().getError() != null) {
-                log.info("Retrying previously failed webhook event {}", eventId);
-                return existing.get();
-            }
-            log.info("Duplicate webhook event {} — skipping", eventId);
-            return null;
-        }
+        return webhookEventRepository.saveAndFlush(event);
     }
 
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
-    public void markWebhookEventProcessed(Long id) {
-        webhookEventRepository.findById(id).ifPresent(event -> {
-            event.setProcessed(true);
-            event.setProcessedAt(LocalDateTime.now());
-            event.setError(null);
-            webhookEventRepository.save(event);
-        });
+    @Transactional
+    public void processOnce(Long id, JsonNode json, String eventType) {
+        WebhookEvent event = webhookEventRepository.findLockedById(id).orElseThrow();
+        if (Boolean.TRUE.equals(event.getProcessed())) return;
+        processBusinessLogic(json, eventType);
+        event.setProcessed(true);
+        event.setProcessedAt(LocalDateTime.now());
+        event.setError(null);
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void markWebhookEventFailed(Long id, String error) {
-        webhookEventRepository.findById(id).ifPresent(event -> {
+        webhookEventRepository.findLockedById(id).ifPresent(event -> {
+            if (Boolean.TRUE.equals(event.getProcessed())) return;
             event.setProcessed(false);
             event.setError(error);
             webhookEventRepository.save(event);
@@ -138,6 +133,14 @@ public class PaymentWebhookService {
     public void processBusinessLogic(JsonNode json, String eventType) {
         switch (eventType) {
             case "checkout.session.completed":
+                handleCheckoutSessionCompleted(json);
+                break;
+            case "checkout.session.expired":
+            case "checkout.session.async_payment_failed":
+                orderRepository.findLockedByStripeSessionId(json.path("data").path("object").path("id").asText())
+                        .ifPresent(this::cancelPending);
+                break;
+            case "checkout.session.async_payment_succeeded":
                 handleCheckoutSessionCompleted(json);
                 break;
             case "payment_intent.succeeded":
@@ -161,7 +164,7 @@ public class PaymentWebhookService {
         String sessionId = sessionObj.path("id").asText();
         String paymentIntentId = sessionObj.path("payment_intent").asText(null);
 
-        Optional<Order> orderOpt = orderRepository.findByStripeSessionId(sessionId);
+        Optional<Order> orderOpt = orderRepository.findLockedByStripeSessionId(sessionId);
         if (orderOpt.isEmpty()) {
             // Permanent: we don't know this session — log and ignore.
             log.warn("checkout.session.completed for unknown stripe_session_id={}", sessionId);
@@ -172,7 +175,7 @@ public class PaymentWebhookService {
         if (paymentIntentId != null && !paymentIntentId.isBlank()) {
             order.setPaymentIntentId(paymentIntentId);
         }
-        markOrderPaid(order);
+        if ("paid".equals(sessionObj.path("payment_status").asText())) markOrderPaid(order);
     }
 
     /**
@@ -183,7 +186,7 @@ public class PaymentWebhookService {
     private void handlePaymentIntentSucceeded(JsonNode json) {
         String paymentIntentId = json.path("data").path("object").path("id").asText();
 
-        Optional<Order> orderOpt = orderRepository.findByPaymentIntentId(paymentIntentId);
+        Optional<Order> orderOpt = orderRepository.findLockedByPaymentIntentId(paymentIntentId);
         if (orderOpt.isEmpty()) {
             log.warn("payment_intent.succeeded for unknown payment_intent_id={}", paymentIntentId);
             return;
@@ -192,7 +195,7 @@ public class PaymentWebhookService {
     }
 
     private void markOrderPaid(Order order) {
-        if (order.getStatus() == OrderStatus.PAID) {
+        if (order.getStatus() != OrderStatus.PENDING) {
             log.debug("Order {} already PAID — skipping duplicate side effects", order.getOrderNumber());
             return;
         }
@@ -212,14 +215,17 @@ public class PaymentWebhookService {
     private void handlePaymentFailure(JsonNode json) {
         String paymentIntentId = json.path("data").path("object").path("id").asText();
 
-        Optional<Order> orderOpt = orderRepository.findByPaymentIntentId(paymentIntentId);
+        Optional<Order> orderOpt = orderRepository.findLockedByPaymentIntentId(paymentIntentId);
         if (orderOpt.isEmpty()) {
             log.warn("payment_intent.payment_failed for unknown payment_intent_id={}", paymentIntentId);
             return;
         }
 
-        Order order = orderOpt.get();
-        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.PAID) {
+        cancelPending(orderOpt.get());
+    }
+
+    private void cancelPending(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING) {
             return;
         }
         order.setStatus(OrderStatus.CANCELLED);

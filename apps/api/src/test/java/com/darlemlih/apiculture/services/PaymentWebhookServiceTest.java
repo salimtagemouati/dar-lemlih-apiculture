@@ -118,6 +118,7 @@ class PaymentWebhookServiceTest {
           "data": {
             "object": {
               "id": "cs_test_session_123",
+              "payment_status": "paid",
               "payment_intent": "pi_test_intent_123"
             }
           }
@@ -126,6 +127,7 @@ class PaymentWebhookServiceTest {
 
         paymentWebhookService.processWebhook("test_signature", payload.getBytes(StandardCharsets.UTF_8));
 
+        paymentWebhookService.processWebhook("test_signature", payload.getBytes(StandardCharsets.UTF_8));
         Order order = orderRepository.findByStripeSessionId("cs_test_session_123").orElseThrow();
         assertEquals(OrderStatus.PAID, order.getStatus());
     }
