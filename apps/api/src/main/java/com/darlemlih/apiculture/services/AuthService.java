@@ -97,7 +97,7 @@ public class AuthService {
         }
 
         // Validate JWT signature + expiry before issuing a new pair.
-        if (!jwtUtils.validateToken(refreshToken, user)) {
+        if (!jwtUtils.validateToken(refreshToken, user, "refresh")) {
             throw new UnauthorizedException("INVALID_REFRESH_TOKEN", "Invalid refresh token");
         }
 

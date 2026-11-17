@@ -106,8 +106,9 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PaymentSessionResponse getPaymentStatus(String sessionId) {
+    public PaymentSessionResponse getPaymentStatus(String sessionId, String principalEmail) {
         Order order = orderRepository.findByStripeSessionId(sessionId)
+                .filter(candidate -> candidate.getUser() != null && candidate.getUser().getEmail().equalsIgnoreCase(principalEmail))
                 .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND", "Unknown payment session"));
         return PaymentSessionResponse.builder()
                 .sessionId(sessionId)
@@ -145,8 +146,10 @@ public class PaymentService {
 
         RefundResult result = paymentGateway.refund(paymentIntentId, refundAmount);
 
-        order.setStatus(OrderStatus.REFUNDED);
-        orderRepository.save(order);
+        if ("succeeded".equals(result.getStatus()) && order.getTotal().compareTo(result.getAmount()) == 0) {
+            order.setStatus(OrderStatus.REFUNDED);
+            orderRepository.save(order);
+        }
 
         log.info("Refund processed: {} for order {}", result.getRefundId(), order.getOrderNumber());
 

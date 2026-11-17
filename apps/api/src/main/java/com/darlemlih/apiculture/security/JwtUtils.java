@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.UUID;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -51,11 +51,11 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(UserDetails userDetails) {
-        return createToken(new HashMap<>(), userDetails.getUsername(), accessTokenExpirationMillis);
+        return createToken(Map.of("token_use", "access"), userDetails.getUsername(), accessTokenExpirationMillis);
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
-        return createToken(new HashMap<>(), userDetails.getUsername(), refreshTokenExpirationMillis);
+        return createToken(Map.of("token_use", "refresh"), userDetails.getUsername(), refreshTokenExpirationMillis);
     }
 
     public long getAccessTokenExpirationMillis() {
@@ -70,6 +70,7 @@ public class JwtUtils {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .claims(claims)
+                .id(UUID.randomUUID().toString())
                 .subject(subject)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expirationMillis))
@@ -77,12 +78,13 @@ public class JwtUtils {
                 .compact();
     }
 
-    public Boolean validateToken(String token, UserDetails userDetails) {
+    public boolean validateToken(String token, UserDetails userDetails, String expectedUse) {
         try {
-            String username = extractUsername(token);
-            return username != null
-                    && username.equals(userDetails.getUsername())
-                    && !isTokenExpired(token);
+            Claims claims = extractAllClaims(token);
+            return userDetails.isEnabled() && userDetails.isAccountNonLocked()
+                    && userDetails.isAccountNonExpired() && userDetails.isCredentialsNonExpired()
+                    && expectedUse.equals(claims.get("token_use", String.class))
+                    && userDetails.getUsername().equals(claims.getSubject());
         } catch (Exception e) {
             return false;
         }

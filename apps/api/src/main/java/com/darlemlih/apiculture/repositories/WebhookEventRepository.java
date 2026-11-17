@@ -9,6 +9,9 @@ import java.util.Optional;
 
 @Repository
 public interface WebhookEventRepository extends JpaRepository<WebhookEvent, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<WebhookEvent> findLockedById(Long value);
+
     Optional<WebhookEvent> findByEventId(String eventId);
     boolean existsByEventId(String eventId);
     long deleteByProcessedTrueAndCreatedAtBefore(LocalDateTime threshold);
