@@ -106,8 +106,9 @@ public class PaymentService {
     }
 
     @Transactional(readOnly = true)
-    public PaymentSessionResponse getPaymentStatus(String sessionId) {
+    public PaymentSessionResponse getPaymentStatus(String sessionId, String principalEmail) {
         Order order = orderRepository.findByStripeSessionId(sessionId)
+                .filter(candidate -> candidate.getUser() != null && candidate.getUser().getEmail().equalsIgnoreCase(principalEmail))
                 .orElseThrow(() -> new NotFoundException("SESSION_NOT_FOUND", "Unknown payment session"));
         return PaymentSessionResponse.builder()
                 .sessionId(sessionId)

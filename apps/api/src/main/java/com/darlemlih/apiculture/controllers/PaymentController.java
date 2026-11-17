@@ -37,8 +37,8 @@ public class PaymentController {
     @Operation(summary = "Get payment status",
         security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/status/{sessionId}")
-    public ResponseEntity<PaymentSessionResponse> getPaymentStatus(@PathVariable String sessionId) {
-        return ResponseEntity.ok(paymentService.getPaymentStatus(sessionId));
+    public ResponseEntity<PaymentSessionResponse> getPaymentStatus(@PathVariable String sessionId, @AuthenticationPrincipal UserDetails principal) {
+        return ResponseEntity.ok(paymentService.getPaymentStatus(sessionId, principal.getUsername()));
     }
 
     @Operation(summary = "Process refund (admin only)",

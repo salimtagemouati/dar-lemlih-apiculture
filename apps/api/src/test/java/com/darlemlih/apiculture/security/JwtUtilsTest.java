@@ -31,13 +31,18 @@ class JwtUtilsTest {
         String accessToken = jwtUtils.generateAccessToken(user);
         assertNotNull(accessToken);
         assertEquals("jwt-test@darlemlih.ma", jwtUtils.extractUsername(accessToken));
-        assertTrue(jwtUtils.validateToken(accessToken, user));
+        assertTrue(jwtUtils.validateToken(accessToken, user, "access"));
 
         String refreshToken = jwtUtils.generateRefreshToken(user);
         assertNotNull(refreshToken);
         assertEquals("jwt-test@darlemlih.ma", jwtUtils.extractUsername(refreshToken));
-        assertTrue(jwtUtils.validateToken(refreshToken, user));
+        assertTrue(jwtUtils.validateToken(refreshToken, user, "refresh"));
 
+        assertFalse(jwtUtils.validateToken(refreshToken, user, "access"));
+        assertFalse(jwtUtils.validateToken(accessToken, user, "refresh"));
+        user.setEnabled(false);
+        assertFalse(jwtUtils.validateToken(accessToken, user, "access"));
+        assertFalse(jwtUtils.validateToken(refreshToken, user, "refresh"));
         assertTrue(jwtUtils.getAccessTokenExpirationMillis() > 0);
         assertTrue(jwtUtils.getRefreshTokenExpirationMillis() > jwtUtils.getAccessTokenExpirationMillis());
     }
